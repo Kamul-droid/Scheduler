@@ -1,0 +1,3 @@
+# Python dependencies for optimization service
+# OR-Tools and other optimization libraries will be added here
+

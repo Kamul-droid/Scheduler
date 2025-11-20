@@ -1,0 +1,15 @@
+{
+  "name": "resource-scheduler",
+  "version": "1.0.0",
+  "description": "Resource Scheduler - Complex Data Visualization & Optimization",
+  "private": true,
+  "scripts": {
+    "build": "nx build",
+    "test": "nx test",
+    "lint": "nx lint",
+    "serve": "nx serve"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
+
