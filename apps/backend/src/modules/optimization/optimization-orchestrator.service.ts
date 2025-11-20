@@ -34,20 +34,29 @@ export class OptimizationOrchestrator {
       const currentState = await this.collectCurrentState(optimizationRequest);
 
       // Step 2: Call Python optimization service
-      const solutions = await this.optimizationClient.requestOptimization(
+      const optimizationResponse = await this.optimizationClient.requestOptimization(
         currentState,
       );
 
       // Step 3: Validate solutions
-      const validatedSolutions = await this.validateSolutions(solutions);
+      const validatedSolutions = await this.validateSolutions(
+        optimizationResponse.solutions || [],
+      );
 
       // Step 4: Create result
       const result: OptimizationResult = {
-        optimizationId,
-        status: OptimizationStatus.COMPLETED,
+        optimizationId: optimizationResponse.optimizationId || optimizationId,
+        status:
+          optimizationResponse.status === 'completed'
+            ? OptimizationStatus.COMPLETED
+            : optimizationResponse.status === 'partial'
+              ? OptimizationStatus.PARTIAL
+              : OptimizationStatus.FAILED,
         solutions: validatedSolutions,
-        totalSolveTime: solutions.totalSolveTime || 0,
-        message: `Generated ${validatedSolutions.length} valid solutions`,
+        totalSolveTime: optimizationResponse.totalSolveTime || 0,
+        message:
+          optimizationResponse.message ||
+          `Generated ${validatedSolutions.length} valid solutions`,
       };
 
       // Store result
@@ -213,14 +222,27 @@ export class OptimizationOrchestrator {
       return [];
     }
 
-    return solutions.filter((solution) => {
-      return (
-        solution &&
-        typeof solution === 'object' &&
-        Array.isArray(solution.assignments) &&
-        typeof solution.score === 'number'
-      );
-    });
+    return solutions
+      .filter((solution) => {
+        return (
+          solution &&
+          typeof solution === 'object' &&
+          Array.isArray(solution.assignments) &&
+          typeof solution.score === 'number'
+        );
+      })
+      .map((solution) => ({
+        id: solution.id || `solution_${Date.now()}`,
+        score: solution.score,
+        assignments: solution.assignments.map((a: any) => ({
+          employeeId: a.employeeId,
+          shiftId: a.shiftId,
+          startTime: new Date(a.startTime),
+          endTime: new Date(a.endTime),
+        })),
+        metrics: solution.metrics || {},
+        solveTime: solution.solveTime || 0,
+      }));
   }
 
   /**

@@ -1,3 +1,29 @@
 # Dockerfile for Python optimization service
-# To be configured based on build requirements
+FROM python:3.11-slim
 
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY apps/optimizer/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY apps/optimizer/src ./src
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Expose port
+EXPOSE 8000
+
+# Run the application
+CMD ["python", "-m", "uvicorn", "src.api.routes:app", "--host", "0.0.0.0", "--port", "8000"]

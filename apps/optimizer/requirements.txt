@@ -1,3 +1,17 @@
-# Python dependencies for optimization service
-# OR-Tools and other optimization libraries will be added here
+# FastAPI and web server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
 
+# OR-Tools for optimization
+ortools==9.9.1873
+
+# Utilities
+python-dateutil==2.8.2
+python-multipart==0.0.6
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
