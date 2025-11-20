@@ -1,43 +1,47 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { ConstraintsService } from './constraints.service';
-// import { Constraint } from './entities/constraint.entity';
-// import { CreateConstraintInput } from './dto/create-constraint.input';
-// import { UpdateConstraintInput } from './dto/update-constraint.input';
+import { CreateConstraintDto } from './dto/create-constraint.dto';
+import { UpdateConstraintDto } from './dto/update-constraint.dto';
+import { Constraint } from './entities/constraint.entity';
 
-@Resolver(() => Object) // TODO: Replace with Constraint entity
+@Resolver(() => Constraint)
 export class ConstraintsResolver {
   constructor(private readonly constraintsService: ConstraintsService) {}
 
-  @Query(() => [Object], { name: 'constraints' })
+  @Query(() => [Constraint], { name: 'constraints' })
   findAll() {
     return this.constraintsService.findAll();
   }
 
-  @Query(() => [Object], { name: 'activeConstraints' })
+  @Query(() => [Constraint], { name: 'activeConstraints' })
   getActiveConstraints() {
     return this.constraintsService.getActiveConstraints();
   }
 
-  @Query(() => Object, { name: 'constraint' })
-  findOne(@Args('id') id: string) {
+  @Query(() => Constraint, { name: 'constraint', nullable: true })
+  findOne(@Args('id', { type: () => ID }) id: string) {
     return this.constraintsService.findOne(id);
   }
 
-  @Mutation(() => Object)
-  createConstraint(@Args('createConstraintInput') createConstraintInput: any) {
+  @Mutation(() => Constraint)
+  createConstraint(
+    @Args('createConstraintInput') createConstraintInput: CreateConstraintDto,
+  ) {
     return this.constraintsService.create(createConstraintInput);
   }
 
-  @Mutation(() => Object)
-  updateConstraint(@Args('updateConstraintInput') updateConstraintInput: any) {
+  @Mutation(() => Constraint)
+  updateConstraint(
+    @Args('updateConstraintInput') updateConstraintInput: UpdateConstraintDto & { id: string },
+  ) {
     return this.constraintsService.update(
       updateConstraintInput.id,
       updateConstraintInput,
     );
   }
 
-  @Mutation(() => Object)
-  removeConstraint(@Args('id') id: string) {
+  @Mutation(() => Constraint, { nullable: true })
+  removeConstraint(@Args('id', { type: () => ID }) id: string) {
     return this.constraintsService.remove(id);
   }
 }

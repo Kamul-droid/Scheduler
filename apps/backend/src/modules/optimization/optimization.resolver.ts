@@ -1,19 +1,21 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { OptimizationRequestDto } from './dto/optimization-request.dto';
+import { OptimizationResult } from './dto/optimization-result.dto';
 import { OptimizationService } from './optimization.service';
-// import { OptimizationRequest } from './dto/optimization-request.input';
-// import { OptimizationResult } from './entities/optimization-result.entity';
 
-@Resolver(() => Object)
+@Resolver(() => OptimizationResult)
 export class OptimizationResolver {
   constructor(private readonly optimizationService: OptimizationService) {}
 
-  @Mutation(() => Object, { name: 'optimizeSchedule' })
-  async optimize(@Args('optimizationRequest') optimizationRequest: any) {
+  @Mutation(() => OptimizationResult, { name: 'optimizeSchedule' })
+  async optimize(
+    @Args('optimizationRequest') optimizationRequest: OptimizationRequestDto,
+  ) {
     return this.optimizationService.optimizeSchedule(optimizationRequest);
   }
 
-  @Query(() => Object, { name: 'optimizationStatus' })
-  async getStatus(@Args('optimizationId') optimizationId: string) {
+  @Query(() => OptimizationResult, { name: 'optimizationStatus', nullable: true })
+  async getStatus(@Args('optimizationId', { type: () => ID }) optimizationId: string) {
     return this.optimizationService.getOptimizationStatus(optimizationId);
   }
 }

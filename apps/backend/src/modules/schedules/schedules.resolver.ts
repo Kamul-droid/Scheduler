@@ -1,38 +1,42 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { Schedule } from './entities/schedule.entity';
 import { SchedulesService } from './schedules.service';
-// import { Schedule } from './entities/schedule.entity';
-// import { CreateScheduleInput } from './dto/create-schedule.input';
-// import { UpdateScheduleInput } from './dto/update-schedule.input';
 
-@Resolver(() => Object) // TODO: Replace with Schedule entity
+@Resolver(() => Schedule)
 export class ScheduleResolver {
   constructor(private readonly schedulesService: SchedulesService) {}
 
-  @Query(() => [Object], { name: 'schedules' })
+  @Query(() => [Schedule], { name: 'schedules' })
   findAll() {
     return this.schedulesService.findAll();
   }
 
-  @Query(() => Object, { name: 'schedule' })
-  findOne(@Args('id') id: string) {
+  @Query(() => Schedule, { name: 'schedule', nullable: true })
+  findOne(@Args('id', { type: () => ID }) id: string) {
     return this.schedulesService.findOne(id);
   }
 
-  @Mutation(() => Object)
-  createSchedule(@Args('createScheduleInput') createScheduleInput: any) {
+  @Mutation(() => Schedule)
+  createSchedule(
+    @Args('createScheduleInput') createScheduleInput: CreateScheduleDto,
+  ) {
     return this.schedulesService.create(createScheduleInput);
   }
 
-  @Mutation(() => Object)
-  updateSchedule(@Args('updateScheduleInput') updateScheduleInput: any) {
+  @Mutation(() => Schedule)
+  updateSchedule(
+    @Args('updateScheduleInput') updateScheduleInput: UpdateScheduleDto & { id: string },
+  ) {
     return this.schedulesService.update(
       updateScheduleInput.id,
       updateScheduleInput,
     );
   }
 
-  @Mutation(() => Object)
-  removeSchedule(@Args('id') id: string) {
+  @Mutation(() => Schedule, { nullable: true })
+  removeSchedule(@Args('id', { type: () => ID }) id: string) {
     return this.schedulesService.remove(id);
   }
 }
