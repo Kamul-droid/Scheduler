@@ -1,6 +1,0 @@
-- name: init
-  up:
-    - 1734700000000_init/up.sql
-  down:
-    - 1734700000000_init/down.sql
-
