@@ -1,3 +1,6 @@
-# Hasura configuration file
-# Hasura metadata and settings will be configured here
-
+version: 3
+endpoint: http://localhost:8080
+admin_secret: myadminsecretkey
+metadata_directory: metadata
+migrations_directory: migrations
+enable_telemetry: false

@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
-// Shift module - can be expanded later if needed
-// Currently shifts are managed through Hasura
+import { CommonModule } from '../../common/common.module';
+import { ShiftsController } from './shifts.controller';
+import { ShiftsService } from './shifts.service';
 
-@Module({})
+@Module({
+  imports: [CommonModule],
+  providers: [ShiftsService],
+  controllers: [ShiftsController],
+  exports: [ShiftsService],
+})
 export class ShiftsModule {}
 
