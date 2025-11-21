@@ -49,10 +49,48 @@ services:
       - --metadata-database-url
       - postgres://${DB_USER:-scheduler}:${DB_PASSWORD:-scheduler}@postgres:5432/${DB_NAME:-scheduler}
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "curl -f -s -m 3 http://localhost:8080/v1/version || exit 1"]
+      interval: 20s
       timeout: 5s
-      retries: 5
+      retries: 3
+      start_period: 40s
+    networks:
+      - scheduler-network
+
+  backend:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: resource-scheduler-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hasura:
+        condition: service_healthy
+      optimizer:
+        condition: service_started
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${BACKEND_PORT:-3000}
+      HASURA_URL: http://hasura:8080
+      HASURA_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-myadminsecretkey}
+      HASURA_GRAPHQL_ENDPOINT: /v1/graphql
+      OPTIMIZER_SERVICE_URL: http://optimizer:8000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-scheduler}
+      DB_PASSWORD: ${DB_PASSWORD:-scheduler}
+      DB_NAME: ${DB_NAME:-scheduler}
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health/live', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - scheduler-network
 

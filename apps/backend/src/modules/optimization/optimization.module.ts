@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CommonModule } from '../../common/common.module';
 import { OptimizationClient } from './optimization-client.service';
 import { OptimizationOrchestrator } from './optimization-orchestrator.service';
@@ -7,7 +7,7 @@ import { OptimizationResolver } from './optimization.resolver';
 import { OptimizationService } from './optimization.service';
 
 @Module({
-  imports: [CommonModule],
+  imports: [forwardRef(() => CommonModule)],
   providers: [
     OptimizationService,
     OptimizationResolver,
