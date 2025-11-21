@@ -27,12 +27,10 @@ export class EmployeesResolver {
 
   @Mutation(() => Employee)
   updateEmployee(
-    @Args('updateEmployeeInput') updateEmployeeInput: UpdateEmployeeDto & { id: string },
+    @Args('id', { type: () => ID }) id: string,
+    @Args('updateEmployeeInput', { type: () => UpdateEmployeeDto }) updateEmployeeInput: UpdateEmployeeDto,
   ) {
-    return this.employeesService.update(
-      updateEmployeeInput.id,
-      updateEmployeeInput,
-    );
+    return this.employeesService.update(id, updateEmployeeInput);
   }
 
   @Mutation(() => Employee, { nullable: true })

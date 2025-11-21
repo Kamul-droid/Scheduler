@@ -15,7 +15,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:integration": "jest --config ./test/jest-e2e.json --testPathPattern=integration"
+    "test:integration": "jest --config ./test/jest-e2e.json --testPathPattern=integration",
+    "test:startup": "jest --config ./test/jest-e2e.json --testPathPattern=startup.integration.spec.ts --forceExit",
+    "prestart:prod": "npm run test:startup"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -24,6 +26,7 @@
     "@nestjs/graphql": "^13.0.0",
     "@nestjs/apollo": "^13.0.0",
     "@apollo/server": "^5.0.0",
+    "@as-integrations/express5": "^1.0.0",
     "graphql": "^16.8.0",
     "class-validator": "^0.14.0",
     "class-transformer": "^0.5.1",

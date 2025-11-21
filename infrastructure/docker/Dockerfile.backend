@@ -1,29 +1,22 @@
 # Dockerfile for NestJS backend application
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
+# Install production dependencies
 FROM base AS deps
 WORKDIR /app
-
-# Copy package files
 COPY apps/backend/package.json apps/backend/package-lock.json* ./
-
-# Install dependencies
 RUN npm ci --only=production && npm cache clean --force
 
 # Build the application
 FROM base AS builder
 WORKDIR /app
-
-# Copy package files
 COPY apps/backend/package.json apps/backend/package-lock.json* ./
-
-# Install all dependencies (including devDependencies for build)
 RUN npm ci
 
-# Copy source code
+# Copy source code and build configuration
 COPY apps/backend/tsconfig.json apps/backend/nest-cli.json ./
 COPY apps/backend/src ./src
+COPY apps/backend/scripts ./scripts
 
 # Build the application
 RUN npm run build
@@ -38,23 +31,20 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
 
-# Copy built application from builder
+# Copy built application and dependencies
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-
-# Copy production dependencies from deps stage
 COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
-
-# Copy package.json for runtime
 COPY apps/backend/package.json ./
+
+# Copy and setup startup script
+COPY --from=builder --chown=nestjs:nodejs /app/scripts/start.sh ./scripts/start.sh
+RUN chmod +x ./scripts/start.sh
 
 USER nestjs
 
-# Expose port
 EXPOSE 3000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health/live', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
-CMD ["node", "dist/main.js"]
+CMD ["sh", "./scripts/start.sh"]

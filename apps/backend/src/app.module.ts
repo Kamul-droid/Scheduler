@@ -15,7 +15,11 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      // In production, use in-memory schema (no file writing)
+      // In development, write to src/schema.gql
+      autoSchemaFile: process.env.NODE_ENV === 'production' 
+        ? true 
+        : join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
       introspection: process.env.NODE_ENV !== 'production',
       resolvers: { JSON: GraphQLJSON },

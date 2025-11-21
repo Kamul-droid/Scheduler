@@ -32,12 +32,10 @@ export class ConstraintsResolver {
 
   @Mutation(() => Constraint)
   updateConstraint(
-    @Args('updateConstraintInput') updateConstraintInput: UpdateConstraintDto & { id: string },
+    @Args('id', { type: () => ID }) id: string,
+    @Args('updateConstraintInput', { type: () => UpdateConstraintDto }) updateConstraintInput: UpdateConstraintDto,
   ) {
-    return this.constraintsService.update(
-      updateConstraintInput.id,
-      updateConstraintInput,
-    );
+    return this.constraintsService.update(id, updateConstraintInput);
   }
 
   @Mutation(() => Constraint, { nullable: true })

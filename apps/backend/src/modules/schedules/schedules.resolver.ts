@@ -27,12 +27,10 @@ export class ScheduleResolver {
 
   @Mutation(() => Schedule)
   updateSchedule(
-    @Args('updateScheduleInput') updateScheduleInput: UpdateScheduleDto & { id: string },
+    @Args('id', { type: () => ID }) id: string,
+    @Args('updateScheduleInput', { type: () => UpdateScheduleDto }) updateScheduleInput: UpdateScheduleDto,
   ) {
-    return this.schedulesService.update(
-      updateScheduleInput.id,
-      updateScheduleInput,
-    );
+    return this.schedulesService.update(id, updateScheduleInput);
   }
 
   @Mutation(() => Schedule, { nullable: true })

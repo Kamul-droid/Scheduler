@@ -44,8 +44,9 @@ export class OptimizationOrchestrator {
       );
 
       // Step 4: Create result
+      const finalOptimizationId = optimizationResponse.optimizationId || optimizationId;
       const result: OptimizationResult = {
-        optimizationId: optimizationResponse.optimizationId || optimizationId,
+        optimizationId: finalOptimizationId,
         status:
           optimizationResponse.status === 'completed'
             ? OptimizationStatus.COMPLETED
@@ -59,8 +60,8 @@ export class OptimizationOrchestrator {
           `Generated ${validatedSolutions.length} valid solutions`,
       };
 
-      // Store result
-      this.optimizationResults.set(optimizationId, result);
+      // Store result using the final optimization ID (from response or generated)
+      this.optimizationResults.set(finalOptimizationId, result);
 
       return result;
     } catch (error) {
