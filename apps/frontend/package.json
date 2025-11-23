@@ -8,7 +8,7 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "codegen": "graphql-codegen --config codegen.ts",
-    "seed": "SEED_BACKEND_STANDALONE=true node scripts/seed-backend.js",
+    "seed": "node scripts/seed-backend.js",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",

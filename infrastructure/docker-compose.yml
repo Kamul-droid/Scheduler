@@ -78,7 +78,7 @@ services:
       HASURA_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-myadminsecretkey}
       HASURA_GRAPHQL_ENDPOINT: /v1/graphql
       OPTIMIZER_SERVICE_URL: http://optimizer:8000
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000,http://localhost:3001,http://localhost:5173}
       DB_HOST: postgres
       DB_PORT: ${DB_PORT:-5432}
       DB_USER: ${DB_USER:-scheduler}
