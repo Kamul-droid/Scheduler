@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Calendar, Settings, Users, Zap } from 'lucide-react';
+import { BookOpen, Building2, Calendar, Clock, Settings, Users, Zap } from 'lucide-react';
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -13,6 +13,9 @@ export default function Layout({ children }: LayoutProps) {
   const navItems = [
     { path: '/app/scheduler', label: 'Scheduler', icon: Calendar },
     { path: '/app/employees', label: 'Employees', icon: Users },
+    { path: '/app/departments', label: 'Departments', icon: Building2 },
+    { path: '/app/shifts', label: 'Shifts', icon: Clock },
+    { path: '/app/skills', label: 'Skills', icon: BookOpen },
     { path: '/app/constraints', label: 'Constraints', icon: Settings },
     { path: '/app/optimization', label: 'Optimization', icon: Zap },
   ];
