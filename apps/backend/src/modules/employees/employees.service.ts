@@ -15,6 +15,22 @@ export class EmployeesService {
 
   constructor(private readonly hasuraClient: HasuraClientService) {}
 
+  /**
+   * Transform Hasura response (snake_case) to Employee entity (camelCase)
+   */
+  private transformEmployee(employee: any): Employee {
+    return {
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      skills: employee.skills,
+      availabilityPattern: employee.availability_pattern,
+      metadata: employee.metadata,
+      createdAt: employee.created_at ? new Date(employee.created_at) : new Date(),
+      updatedAt: employee.updated_at ? new Date(employee.updated_at) : new Date(),
+    };
+  }
+
   async findAll(): Promise<Employee[]> {
     const query = `
       query GetEmployees {
@@ -23,19 +39,19 @@ export class EmployeesService {
           name
           email
           skills
-          availabilityPattern
+          availability_pattern
           metadata
-          createdAt
-          updatedAt
+          created_at
+          updated_at
         }
       }
     `;
 
     try {
-      const result = await this.hasuraClient.execute<{ employees: Employee[] }>(
+      const result = await this.hasuraClient.execute<{ employees: any[] }>(
         query,
       );
-      return result.employees || [];
+      return (result.employees || []).map(emp => this.transformEmployee(emp));
     } catch (error) {
       this.logger.error(`Failed to fetch employees: ${error.message}`);
       throw error;
@@ -50,10 +66,10 @@ export class EmployeesService {
           name
           email
           skills
-          availabilityPattern
+          availability_pattern
           metadata
-          createdAt
-          updatedAt
+          created_at
+          updated_at
         }
       }
     `;
@@ -67,7 +83,7 @@ export class EmployeesService {
         throw new NotFoundException(`Employee with ID ${id} not found`);
       }
 
-      return result.employees_by_pk;
+      return this.transformEmployee(result.employees_by_pk);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -85,10 +101,10 @@ export class EmployeesService {
           name
           email
           skills
-          availabilityPattern
+          availability_pattern
           metadata
-          createdAt
-          updatedAt
+          created_at
+          updated_at
         }
       }
     `;
@@ -107,7 +123,7 @@ export class EmployeesService {
       });
 
       this.logger.log(`Created employee: ${result.insert_employees_one.id}`);
-      return result.insert_employees_one;
+      return this.transformEmployee(result.insert_employees_one);
     } catch (error) {
       this.logger.error(`Failed to create employee: ${error.message}`);
       throw new BadRequestException(`Failed to create employee: ${error.message}`);
@@ -128,10 +144,10 @@ export class EmployeesService {
           name
           email
           skills
-          availabilityPattern
+          availability_pattern
           metadata
-          createdAt
-          updatedAt
+          created_at
+          updated_at
         }
       }
     `;
@@ -151,7 +167,7 @@ export class EmployeesService {
       }>(mutation, { id, updates });
 
       this.logger.log(`Updated employee: ${id}`);
-      return result.update_employees_by_pk;
+      return this.transformEmployee(result.update_employees_by_pk);
     } catch (error) {
       this.logger.error(`Failed to update employee ${id}: ${error.message}`);
       throw new BadRequestException(

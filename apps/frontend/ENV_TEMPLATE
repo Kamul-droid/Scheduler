@@ -1,0 +1,10 @@
+# Frontend Environment Variables
+
+# Hasura GraphQL endpoint
+VITE_HASURA_URL=http://localhost:8080/v1/graphql
+
+# Hasura admin secret (for development)
+VITE_HASURA_ADMIN_SECRET=your-admin-secret-here
+
+# Backend API URL (NestJS backend runs on port 3000)
+VITE_API_URL=http://localhost:3000

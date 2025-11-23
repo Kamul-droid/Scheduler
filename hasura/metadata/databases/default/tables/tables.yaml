@@ -1,0 +1,6 @@
+- "!include employees.yaml"
+- "!include departments.yaml"
+- "!include shifts.yaml"
+- "!include schedules.yaml"
+- "!include constraints.yaml"
+

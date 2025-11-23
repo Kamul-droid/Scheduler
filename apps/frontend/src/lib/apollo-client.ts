@@ -1,8 +1,13 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 
+// Use relative URL to leverage Vite proxy for GraphQL
+// The proxy routes /graphql to backend (which then uses Hasura)
+// Or use /v1/graphql for direct Hasura access if needed
+const graphqlUri = import.meta.env.VITE_GRAPHQL_URL || '/graphql';
+
 const httpLink = createHttpLink({
-  uri: import.meta.env.VITE_HASURA_URL || 'http://localhost:8080/v1/graphql',
+  uri: graphqlUri,
 });
 
 const authLink = setContext((_, { headers }) => {

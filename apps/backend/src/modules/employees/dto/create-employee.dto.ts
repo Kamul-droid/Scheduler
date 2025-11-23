@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEmail, IsObject, IsOptional, IsString } from 'class-validator';
 import { GraphQLJSON } from 'graphql-scalars';
 
 @InputType()
@@ -14,14 +14,17 @@ export class CreateEmployeeDto {
 
   @Field(() => GraphQLJSON, { nullable: true })
   @IsOptional()
+  @IsArray()
   skills?: any; // Array of Skill objects
 
   @Field(() => GraphQLJSON, { nullable: true })
   @IsOptional()
+  @IsObject()
   availabilityPattern?: any; // AvailabilityPattern object
 
   @Field(() => GraphQLJSON, { nullable: true })
   @IsOptional()
+  @IsObject()
   metadata?: any; // Flexible metadata
 }
 

@@ -1,5 +1,5 @@
 import { Field, ID, InputType } from '@nestjs/graphql';
-import { IsDateString, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsArray, IsDateString, IsInt, IsObject, IsOptional, IsUUID, Min } from 'class-validator';
 import { GraphQLJSON } from 'graphql-scalars';
 
 @InputType()
@@ -10,6 +10,7 @@ export class CreateShiftDto {
 
   @Field(() => GraphQLJSON, { nullable: true })
   @IsOptional()
+  @IsArray()
   requiredSkills?: any; // Array of Skill objects
 
   @Field()
@@ -32,6 +33,7 @@ export class CreateShiftDto {
 
   @Field(() => GraphQLJSON, { nullable: true })
   @IsOptional()
+  @IsObject()
   metadata?: any; // Flexible metadata
 }
 

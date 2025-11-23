@@ -176,7 +176,21 @@ export class OptimizationOrchestrator {
       const constraintsResult = await this.hasuraClient.execute<{
         constraints: any[];
       }>(constraintsQuery);
-      state.constraints = constraintsResult.constraints || [];
+      // Transform constraints to match optimizer expectations
+      state.constraints = (constraintsResult.constraints || []).map((constraint) => {
+        const transformed = { ...constraint };
+        // Transform max_hours constraint rules to match optimizer format
+        if (constraint.type === 'max_hours' && constraint.rules) {
+          const rules = { ...constraint.rules };
+          // If maxHoursPerWeek exists, also set maxHours for optimizer compatibility
+          if (rules.maxHoursPerWeek && !rules.maxHours) {
+            rules.maxHours = rules.maxHoursPerWeek;
+            rules.periodInDays = 7; // Weekly period
+          }
+          transformed.rules = rules;
+        }
+        return transformed;
+      });
 
       // Fetch current schedules in date range
       const schedulesQuery = `

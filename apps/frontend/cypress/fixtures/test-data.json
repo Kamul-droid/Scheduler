@@ -1,0 +1,596 @@
+{
+  "departments": [
+    {
+      "name": "Emergency Department",
+      "requirements": {
+        "minCertifications": ["ACLS", "BLS"],
+        "minExperience": 2,
+        "shiftCoverage": "24/7"
+      }
+    },
+    {
+      "name": "Intensive Care Unit",
+      "requirements": {
+        "minCertifications": ["ACLS", "BLS", "CCRN"],
+        "minExperience": 3,
+        "shiftCoverage": "24/7",
+        "specializations": ["Critical Care", "Ventilator Management"]
+      }
+    },
+    {
+      "name": "Operating Room",
+      "requirements": {
+        "minCertifications": ["ACLS", "BLS", "CNOR"],
+        "minExperience": 2,
+        "shiftCoverage": "business_hours",
+        "specializations": ["Surgical", "Anesthesia"]
+      }
+    },
+    {
+      "name": "Outpatient Clinic",
+      "requirements": {
+        "minCertifications": ["BLS"],
+        "minExperience": 1,
+        "shiftCoverage": "business_hours"
+      }
+    }
+  ],
+  "employees": [
+    {
+      "name": "Dr. Sarah Chen",
+      "email": "sarah.chen@hospital.com",
+      "skills": [
+        {
+          "name": "Emergency Medicine",
+          "level": "expert",
+          "certifications": ["ACLS", "BLS", "ATLS"],
+          "yearsExperience": 8
+        },
+        {
+          "name": "Trauma Care",
+          "level": "expert",
+          "certifications": ["ATLS"],
+          "yearsExperience": 8
+        }
+      ],
+      "availabilityPattern": {
+        "type": "rotating",
+        "preferredShifts": ["day", "evening"],
+        "unavailableDays": ["saturday"],
+        "maxHoursPerWeek": 50,
+        "minRestHours": 12
+      },
+      "metadata": {
+        "role": "Physician",
+        "department": "Emergency Department",
+        "employeeType": "full_time",
+        "hireDate": "2016-03-15",
+        "preferences": {
+          "preferredTeamMembers": [],
+          "avoidConsecutiveNights": true
+        }
+      }
+    },
+    {
+      "name": "Nurse Michael Rodriguez",
+      "email": "michael.rodriguez@hospital.com",
+      "skills": [
+        {
+          "name": "Critical Care Nursing",
+          "level": "advanced",
+          "certifications": ["ACLS", "BLS", "CCRN"],
+          "yearsExperience": 5
+        },
+        {
+          "name": "Ventilator Management",
+          "level": "advanced",
+          "certifications": ["CCRN"],
+          "yearsExperience": 5
+        }
+      ],
+      "availabilityPattern": {
+        "type": "fixed",
+        "preferredShifts": ["night"],
+        "unavailableDays": [],
+        "maxHoursPerWeek": 40,
+        "minRestHours": 11
+      },
+      "metadata": {
+        "role": "Registered Nurse",
+        "department": "Intensive Care Unit",
+        "employeeType": "full_time",
+        "hireDate": "2019-06-01",
+        "preferences": {
+          "preferredTeamMembers": [],
+          "preferredWeekendFrequency": "every_other"
+        }
+      }
+    },
+    {
+      "name": "Nurse Emily Watson",
+      "email": "emily.watson@hospital.com",
+      "skills": [
+        {
+          "name": "Surgical Nursing",
+          "level": "advanced",
+          "certifications": ["BLS", "CNOR"],
+          "yearsExperience": 4
+        },
+        {
+          "name": "Anesthesia Assistance",
+          "level": "intermediate",
+          "certifications": ["CNOR"],
+          "yearsExperience": 4
+        }
+      ],
+      "availabilityPattern": {
+        "type": "flexible",
+        "preferredShifts": ["day"],
+        "unavailableDays": ["sunday"],
+        "maxHoursPerWeek": 36,
+        "minRestHours": 10
+      },
+      "metadata": {
+        "role": "Registered Nurse",
+        "department": "Operating Room",
+        "employeeType": "full_time",
+        "hireDate": "2020-01-15",
+        "preferences": {
+          "preferredTeamMembers": [],
+          "preferredShiftLength": 8
+        }
+      }
+    },
+    {
+      "name": "Nurse Practitioner James Kim",
+      "email": "james.kim@hospital.com",
+      "skills": [
+        {
+          "name": "Primary Care",
+          "level": "expert",
+          "certifications": ["BLS", "NP-C"],
+          "yearsExperience": 6
+        },
+        {
+          "name": "Chronic Disease Management",
+          "level": "advanced",
+          "certifications": ["NP-C"],
+          "yearsExperience": 6
+        }
+      ],
+      "availabilityPattern": {
+        "type": "standard",
+        "preferredShifts": ["day"],
+        "unavailableDays": ["saturday", "sunday"],
+        "maxHoursPerWeek": 40,
+        "minRestHours": 10
+      },
+      "metadata": {
+        "role": "Nurse Practitioner",
+        "department": "Outpatient Clinic",
+        "employeeType": "full_time",
+        "hireDate": "2018-09-10",
+        "preferences": {
+          "preferredTeamMembers": [],
+          "preferredPatientLoad": "moderate"
+        }
+      }
+    },
+    {
+      "name": "Nurse Lisa Anderson",
+      "email": "lisa.anderson@hospital.com",
+      "skills": [
+        {
+          "name": "Emergency Nursing",
+          "level": "advanced",
+          "certifications": ["ACLS", "BLS", "TNCC"],
+          "yearsExperience": 7
+        },
+        {
+          "name": "Triage",
+          "level": "expert",
+          "certifications": ["TNCC"],
+          "yearsExperience": 7
+        }
+      ],
+      "availabilityPattern": {
+        "type": "rotating",
+        "preferredShifts": ["day", "evening", "night"],
+        "unavailableDays": [],
+        "maxHoursPerWeek": 40,
+        "minRestHours": 11
+      },
+      "metadata": {
+        "role": "Registered Nurse",
+        "department": "Emergency Department",
+        "employeeType": "full_time",
+        "hireDate": "2017-04-20",
+        "preferences": {
+          "preferredTeamMembers": [],
+          "flexibleWeekends": true
+        }
+      }
+    },
+    {
+      "name": "Nurse David Park",
+      "email": "david.park@hospital.com",
+      "skills": [
+        {
+          "name": "Pediatric Critical Care",
+          "level": "advanced",
+          "certifications": ["ACLS", "BLS", "PALS", "CCRN"],
+          "yearsExperience": 4
+        },
+        {
+          "name": "Pediatric Ventilator Management",
+          "level": "intermediate",
+          "certifications": ["PALS", "CCRN"],
+          "yearsExperience": 4
+        }
+      ],
+      "availabilityPattern": {
+        "type": "flexible",
+        "preferredShifts": ["day", "evening"],
+        "unavailableDays": ["friday"],
+        "maxHoursPerWeek": 36,
+        "minRestHours": 12
+      },
+      "metadata": {
+        "role": "Registered Nurse",
+        "department": "Intensive Care Unit",
+        "employeeType": "full_time",
+        "hireDate": "2020-08-01",
+        "preferences": {
+          "preferredTeamMembers": [],
+          "specialization": "pediatric"
+        }
+      }
+    },
+    {
+      "name": "Nurse Robert Taylor",
+      "email": "robert.taylor@hospital.com",
+      "skills": [
+        {
+          "name": "General Nursing",
+          "level": "intermediate",
+          "certifications": ["BLS"],
+          "yearsExperience": 2
+        }
+      ],
+      "availabilityPattern": {
+        "type": "standard",
+        "preferredShifts": ["day"],
+        "unavailableDays": [],
+        "maxHoursPerWeek": 40,
+        "minRestHours": 10
+      },
+      "metadata": {
+        "role": "Registered Nurse",
+        "department": "Outpatient Clinic",
+        "employeeType": "full_time",
+        "hireDate": "2022-03-01",
+        "preferences": {
+          "preferredTeamMembers": [],
+          "training": true
+        }
+      }
+    },
+    {
+      "name": "Nurse Jennifer Martinez",
+      "email": "jennifer.martinez@hospital.com",
+      "skills": [
+        {
+          "name": "Surgical Nursing",
+          "level": "expert",
+          "certifications": ["BLS", "CNOR"],
+          "yearsExperience": 10
+        },
+        {
+          "name": "OR Coordination",
+          "level": "expert",
+          "certifications": ["CNOR"],
+          "yearsExperience": 10
+        }
+      ],
+      "availabilityPattern": {
+        "type": "fixed",
+        "preferredShifts": ["day"],
+        "unavailableDays": ["saturday", "sunday"],
+        "maxHoursPerWeek": 40,
+        "minRestHours": 10
+      },
+      "metadata": {
+        "role": "Registered Nurse",
+        "department": "Operating Room",
+        "employeeType": "full_time",
+        "hireDate": "2014-02-10",
+        "preferences": {
+          "preferredTeamMembers": [],
+          "leadership": true
+        }
+      }
+    }
+  ],
+  "shifts": [
+    {
+      "departmentId": "",
+      "requiredSkills": [
+        {
+          "name": "Emergency Medicine",
+          "level": "intermediate",
+          "certifications": ["ACLS", "BLS"]
+        }
+      ],
+      "minStaffing": 3,
+      "maxStaffing": 5,
+      "startTime": "2024-01-15T07:00:00Z",
+      "endTime": "2024-01-15T19:00:00Z",
+      "metadata": {
+        "name": "ED Day Shift",
+        "shiftType": "day",
+        "department": "Emergency Department",
+        "priority": "high",
+        "notes": "High volume expected"
+      }
+    },
+    {
+      "departmentId": "",
+      "requiredSkills": [
+        {
+          "name": "Critical Care Nursing",
+          "level": "advanced",
+          "certifications": ["ACLS", "BLS", "CCRN"]
+        }
+      ],
+      "minStaffing": 2,
+      "maxStaffing": 4,
+      "startTime": "2024-01-15T19:00:00Z",
+      "endTime": "2024-01-16T07:00:00Z",
+      "metadata": {
+        "name": "ICU Night Shift",
+        "shiftType": "night",
+        "department": "Intensive Care Unit",
+        "priority": "critical",
+        "notes": "Requires experienced staff"
+      }
+    },
+    {
+      "departmentId": "",
+      "requiredSkills": [
+        {
+          "name": "Surgical Nursing",
+          "level": "intermediate",
+          "certifications": ["BLS", "CNOR"]
+        }
+      ],
+      "minStaffing": 2,
+      "maxStaffing": 3,
+      "startTime": "2024-01-15T06:00:00Z",
+      "endTime": "2024-01-15T14:00:00Z",
+      "metadata": {
+        "name": "OR Morning Block",
+        "shiftType": "day",
+        "department": "Operating Room",
+        "priority": "high",
+        "notes": "Scheduled surgeries"
+      }
+    },
+    {
+      "departmentId": "",
+      "requiredSkills": [
+        {
+          "name": "Primary Care",
+          "level": "intermediate",
+          "certifications": ["BLS"]
+        }
+      ],
+      "minStaffing": 2,
+      "maxStaffing": 4,
+      "startTime": "2024-01-15T08:00:00Z",
+      "endTime": "2024-01-15T17:00:00Z",
+      "metadata": {
+        "name": "Clinic Day Shift",
+        "shiftType": "day",
+        "department": "Outpatient Clinic",
+        "priority": "medium",
+        "notes": "Regular appointments"
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "type": "max_hours",
+      "rules": {
+        "maxHoursPerWeek": 40,
+        "maxHoursPerDay": 12,
+        "maxConsecutiveDays": 5,
+        "overtimeAllowed": false
+      },
+      "priority": 90,
+      "active": true,
+      "metadata": {
+        "description": "Standard work hour limits",
+        "appliesTo": "all_employees",
+        "enforcement": "strict"
+      }
+    },
+    {
+      "type": "min_rest",
+      "rules": {
+        "minRestHours": 11,
+        "minRestBetweenShifts": 11,
+        "enforceAfterNightShift": true
+      },
+      "priority": 95,
+      "active": true,
+      "metadata": {
+        "description": "Minimum rest period between shifts",
+        "appliesTo": "all_employees",
+        "enforcement": "strict",
+        "regulatory": true
+      }
+    },
+    {
+      "type": "fair_distribution",
+      "rules": {
+        "shiftType": "weekend",
+        "distributionMethod": "equal",
+        "maxWeekendsPerMonth": 2,
+        "preferRotation": true
+      },
+      "priority": 70,
+      "active": true,
+      "metadata": {
+        "description": "Fair weekend shift distribution",
+        "appliesTo": "all_employees",
+        "enforcement": "preferred"
+      }
+    },
+    {
+      "type": "skill_requirement",
+      "rules": {
+        "requiredCertifications": ["ACLS", "BLS"],
+        "minExperience": 2,
+        "enforceForDepartments": ["Emergency Department", "Intensive Care Unit"]
+      },
+      "priority": 100,
+      "active": true,
+      "metadata": {
+        "description": "Certification requirements for critical departments",
+        "appliesTo": "specific_departments",
+        "enforcement": "strict",
+        "regulatory": true
+      }
+    },
+    {
+      "type": "availability",
+      "rules": {
+        "respectUnavailableDays": true,
+        "respectPreferredShifts": true,
+        "allowOverride": false
+      },
+      "priority": 60,
+      "active": true,
+      "metadata": {
+        "description": "Respect employee availability preferences",
+        "appliesTo": "all_employees",
+        "enforcement": "preferred"
+      }
+    },
+    {
+      "type": "max_consecutive_days",
+      "rules": {
+        "maxConsecutiveDays": 5,
+        "requireRestAfter": true,
+        "restDaysRequired": 2
+      },
+      "priority": 80,
+      "active": true,
+      "metadata": {
+        "description": "Maximum consecutive working days",
+        "appliesTo": "all_employees",
+        "enforcement": "strict"
+      }
+    }
+  ],
+  "schedules": [
+    {
+      "employeeId": "",
+      "shiftId": "",
+      "startTime": "2024-01-15T07:00:00Z",
+      "endTime": "2024-01-15T19:00:00Z",
+      "status": "confirmed",
+      "metadata": {
+        "assignmentType": "primary",
+        "notes": "Regular assignment"
+      }
+    },
+    {
+      "employeeId": "",
+      "shiftId": "",
+      "startTime": "2024-01-15T19:00:00Z",
+      "endTime": "2024-01-16T07:00:00Z",
+      "status": "confirmed",
+      "metadata": {
+        "assignmentType": "primary",
+        "notes": "Night shift coverage"
+      }
+    }
+  ],
+  "userMappings": {
+    "roles": {
+      "physician": {
+        "typicalDepartments": ["Emergency Department", "Intensive Care Unit"],
+        "requiredSkills": ["Emergency Medicine", "Critical Care"],
+        "typicalCertifications": ["ACLS", "BLS", "ATLS"],
+        "typicalAvailability": "rotating",
+        "typicalHoursPerWeek": 50
+      },
+      "registered_nurse": {
+        "typicalDepartments": ["Emergency Department", "Intensive Care Unit", "Operating Room", "Outpatient Clinic"],
+        "requiredSkills": ["Nursing", "Patient Care"],
+        "typicalCertifications": ["BLS"],
+        "typicalAvailability": "flexible",
+        "typicalHoursPerWeek": 40
+      },
+      "nurse_practitioner": {
+        "typicalDepartments": ["Outpatient Clinic"],
+        "requiredSkills": ["Primary Care", "Chronic Disease Management"],
+        "typicalCertifications": ["BLS", "NP-C"],
+        "typicalAvailability": "standard",
+        "typicalHoursPerWeek": 40
+      }
+    },
+    "departments": {
+      "Emergency Department": {
+        "typicalRoles": ["Physician", "Registered Nurse"],
+        "requiredCertifications": ["ACLS", "BLS"],
+        "shiftCoverage": "24/7",
+        "minStaffingPerShift": 3,
+        "typicalShiftLength": 12
+      },
+      "Intensive Care Unit": {
+        "typicalRoles": ["Registered Nurse"],
+        "requiredCertifications": ["ACLS", "BLS", "CCRN"],
+        "shiftCoverage": "24/7",
+        "minStaffingPerShift": 2,
+        "typicalShiftLength": 12
+      },
+      "Operating Room": {
+        "typicalRoles": ["Registered Nurse"],
+        "requiredCertifications": ["BLS", "CNOR"],
+        "shiftCoverage": "business_hours",
+        "minStaffingPerShift": 2,
+        "typicalShiftLength": 8
+      },
+      "Outpatient Clinic": {
+        "typicalRoles": ["Nurse Practitioner", "Registered Nurse"],
+        "requiredCertifications": ["BLS"],
+        "shiftCoverage": "business_hours",
+        "minStaffingPerShift": 2,
+        "typicalShiftLength": 8
+      }
+    },
+    "shiftTypes": {
+      "day": {
+        "hours": "07:00-19:00",
+        "typicalLength": 12,
+        "preferredBy": ["day_preference_employees"],
+        "typicalDepartments": ["Emergency Department", "Intensive Care Unit"]
+      },
+      "evening": {
+        "hours": "15:00-23:00",
+        "typicalLength": 8,
+        "preferredBy": ["evening_preference_employees"],
+        "typicalDepartments": ["Emergency Department"]
+      },
+      "night": {
+        "hours": "19:00-07:00",
+        "typicalLength": 12,
+        "preferredBy": ["night_preference_employees"],
+        "typicalDepartments": ["Emergency Department", "Intensive Care Unit"],
+        "requiresRestAfter": true
+      }
+    }
+  }
+}

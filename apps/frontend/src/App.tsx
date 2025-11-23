@@ -10,11 +10,11 @@ function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<Navigate to="/scheduler" replace />} />
-          <Route path="/scheduler" element={<SchedulerView />} />
-          <Route path="/employees" element={<EmployeeManagement />} />
-          <Route path="/constraints" element={<ConstraintManagement />} />
-          <Route path="/optimization" element={<OptimizationPanel />} />
+          <Route path="/" element={<Navigate to="/app/scheduler" replace />} />
+          <Route path="/app/scheduler" element={<SchedulerView />} />
+          <Route path="/app/employees" element={<EmployeeManagement />} />
+          <Route path="/app/constraints" element={<ConstraintManagement />} />
+          <Route path="/app/optimization" element={<OptimizationPanel />} />
         </Routes>
       </Layout>
     </BrowserRouter>

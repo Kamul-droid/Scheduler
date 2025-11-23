@@ -1,0 +1,43 @@
+table:
+  name: constraints
+  schema: public
+object_relationships: []
+array_relationships: []
+select_permissions:
+  - role: admin
+    permission:
+      columns:
+        - id
+        - type
+        - rules
+        - priority
+        - active
+        - created_at
+        - updated_at
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: admin
+    permission:
+      columns:
+        - type
+        - rules
+        - priority
+        - active
+      check: {}
+      backend_only: false
+update_permissions:
+  - role: admin
+    permission:
+      columns:
+        - type
+        - rules
+        - priority
+        - active
+      filter: {}
+      check: {}
+delete_permissions:
+  - role: admin
+    permission:
+      filter: {}
+

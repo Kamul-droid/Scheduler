@@ -1,0 +1,53 @@
+table:
+  name: employees
+  schema: public
+object_relationships: []
+array_relationships:
+  - name: schedules
+    using:
+      foreign_key_constraint_on:
+        column: employee_id
+        table:
+          name: schedules
+          schema: public
+select_permissions:
+  - role: admin
+    permission:
+      columns:
+        - id
+        - name
+        - email
+        - skills
+        - availability_pattern
+        - metadata
+        - created_at
+        - updated_at
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: admin
+    permission:
+      columns:
+        - name
+        - email
+        - skills
+        - availability_pattern
+        - metadata
+      check: {}
+      backend_only: false
+update_permissions:
+  - role: admin
+    permission:
+      columns:
+        - name
+        - email
+        - skills
+        - availability_pattern
+        - metadata
+      filter: {}
+      check: {}
+delete_permissions:
+  - role: admin
+    permission:
+      filter: {}
+

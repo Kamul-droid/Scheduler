@@ -1,0 +1,44 @@
+table:
+  name: departments
+  schema: public
+object_relationships: []
+array_relationships:
+  - name: shifts
+    using:
+      foreign_key_constraint_on:
+        column: department_id
+        table:
+          name: shifts
+          schema: public
+select_permissions:
+  - role: admin
+    permission:
+      columns:
+        - id
+        - name
+        - requirements
+        - created_at
+        - updated_at
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: admin
+    permission:
+      columns:
+        - name
+        - requirements
+      check: {}
+      backend_only: false
+update_permissions:
+  - role: admin
+    permission:
+      columns:
+        - name
+        - requirements
+      filter: {}
+      check: {}
+delete_permissions:
+  - role: admin
+    permission:
+      filter: {}
+

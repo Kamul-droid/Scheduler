@@ -1,0 +1,55 @@
+table:
+  name: schedules
+  schema: public
+object_relationships:
+  - name: employee
+    using:
+      foreign_key_constraint_on: employee_id
+  - name: shift
+    using:
+      foreign_key_constraint_on: shift_id
+array_relationships: []
+select_permissions:
+  - role: admin
+    permission:
+      columns:
+        - id
+        - employee_id
+        - shift_id
+        - start_time
+        - end_time
+        - status
+        - metadata
+        - created_at
+        - updated_at
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: admin
+    permission:
+      columns:
+        - employee_id
+        - shift_id
+        - start_time
+        - end_time
+        - status
+        - metadata
+      check: {}
+      backend_only: false
+update_permissions:
+  - role: admin
+    permission:
+      columns:
+        - employee_id
+        - shift_id
+        - start_time
+        - end_time
+        - status
+        - metadata
+      filter: {}
+      check: {}
+delete_permissions:
+  - role: admin
+    permission:
+      filter: {}
+

@@ -1,5 +1,5 @@
 import { Field, InputType, registerEnumType } from '@nestjs/graphql';
-import { IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsObject, IsOptional, Max, Min } from 'class-validator';
 import { GraphQLJSON } from 'graphql-scalars';
 import { ConstraintType } from '../../../common/types/constraint-type.enum';
 
@@ -15,6 +15,8 @@ export class CreateConstraintDto {
   type: ConstraintType;
 
   @Field(() => GraphQLJSON)
+  @IsNotEmpty()
+  @IsObject()
   rules: any; // Flexible constraint rules
 
   @Field()

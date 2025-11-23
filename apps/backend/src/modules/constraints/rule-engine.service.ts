@@ -19,17 +19,29 @@ export class RuleEngineService {
 
     switch (constraintType) {
       case ConstraintType.MAX_HOURS:
-        if (typeof rules.maxHours !== 'number' || rules.maxHours <= 0) {
+        // Accept either maxHours (simple format) or maxHoursPerWeek (complex format)
+        const maxHours = rules.maxHours || rules.maxHoursPerWeek;
+        if (typeof maxHours !== 'number' || maxHours <= 0) {
           throw new BadRequestException(
-            'max_hours constraint requires a positive maxHours value',
+            'max_hours constraint requires a positive maxHours or maxHoursPerWeek value',
           );
         }
+        // Validate periodInDays if provided
         if (
           rules.periodInDays &&
           (typeof rules.periodInDays !== 'number' || rules.periodInDays <= 0)
         ) {
           throw new BadRequestException(
             'max_hours constraint periodInDays must be a positive number',
+          );
+        }
+        // Validate maxHoursPerDay if provided (complex format)
+        if (
+          rules.maxHoursPerDay &&
+          (typeof rules.maxHoursPerDay !== 'number' || rules.maxHoursPerDay <= 0)
+        ) {
+          throw new BadRequestException(
+            'max_hours constraint maxHoursPerDay must be a positive number',
           );
         }
         break;
@@ -157,9 +169,15 @@ export class RuleEngineService {
    * Evaluates max hours constraint
    */
   private async evaluateMaxHours(
-    rules: { maxHours: number; periodInDays?: number },
+    rules: { maxHours?: number; maxHoursPerWeek?: number; maxHoursPerDay?: number; periodInDays?: number },
     schedule: CreateScheduleDto,
   ): Promise<boolean> {
+    // Support both formats: maxHours (simple) or maxHoursPerWeek (complex)
+    const maxHours = rules.maxHours || rules.maxHoursPerWeek;
+    if (!maxHours || maxHours <= 0) {
+      return true; // If no limit specified, allow it
+    }
+
     const periodInDays = rules.periodInDays || 7; // Default to weekly
     const periodStart = new Date(schedule.startTime);
     periodStart.setDate(periodStart.getDate() - periodInDays);
@@ -202,7 +220,13 @@ export class RuleEngineService {
         (scheduleEnd.getTime() - scheduleStart.getTime()) / (1000 * 60 * 60);
       totalHours += scheduleHours;
 
-      return totalHours <= rules.maxHours;
+      // Check daily limit if provided (maxHoursPerDay format)
+      if (rules.maxHoursPerDay && scheduleHours > rules.maxHoursPerDay) {
+        return false;
+      }
+
+      // Check weekly/period limit
+      return totalHours <= maxHours;
     } catch (error) {
       this.logger.error(`Error evaluating max hours: ${error.message}`);
       return false;

@@ -1,0 +1,58 @@
+table:
+  name: shifts
+  schema: public
+object_relationships:
+  - name: department
+    using:
+      foreign_key_constraint_on: department_id
+array_relationships:
+  - name: schedules
+    using:
+      foreign_key_constraint_on: shift_id
+select_permissions:
+  - role: admin
+    permission:
+      columns:
+        - id
+        - department_id
+        - required_skills
+        - min_staffing
+        - max_staffing
+        - start_time
+        - end_time
+        - metadata
+        - created_at
+        - updated_at
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: admin
+    permission:
+      columns:
+        - department_id
+        - required_skills
+        - min_staffing
+        - max_staffing
+        - start_time
+        - end_time
+        - metadata
+      check: {}
+      backend_only: false
+update_permissions:
+  - role: admin
+    permission:
+      columns:
+        - department_id
+        - required_skills
+        - min_staffing
+        - max_staffing
+        - start_time
+        - end_time
+        - metadata
+      filter: {}
+      check: {}
+delete_permissions:
+  - role: admin
+    permission:
+      filter: {}
+

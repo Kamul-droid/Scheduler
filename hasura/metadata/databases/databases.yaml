@@ -8,5 +8,6 @@
       isolation_level: read-committed
       pool_settings:
         connection_lifetime: 600
-  tables: []
+  tables:
+    - "!include default/tables/tables.yaml"
 
