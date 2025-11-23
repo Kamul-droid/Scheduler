@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import Input from '../../components/Input';
+import { useEffect, useState } from 'react';
 import Button from '../../components/Button';
+import Input from '../../components/Input';
 
 interface EmployeeFormProps {
   employee?: any;
@@ -20,10 +20,17 @@ export default function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeF
 
   useEffect(() => {
     if (employee) {
+      // Extract skill names if skills are objects, otherwise use as-is
+      const skills = Array.isArray(employee.skills)
+        ? employee.skills.map((skill: any) => 
+            typeof skill === 'string' ? skill : skill?.name || String(skill)
+          )
+        : [];
+      
       setFormData({
         name: employee.name || '',
         email: employee.email || '',
-        skills: Array.isArray(employee.skills) ? employee.skills : [],
+        skills,
         availabilityPattern: employee.availabilityPattern || null,
         metadata: employee.metadata || null,
       });

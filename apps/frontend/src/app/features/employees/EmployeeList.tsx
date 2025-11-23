@@ -1,5 +1,5 @@
 import { Edit, Trash2 } from 'lucide-react';
-import Button from '../../components/Button';
+import { formatSkills } from '../../utils/formatSkills';
 
 interface EmployeeListProps {
   employees: any[];
@@ -47,9 +47,7 @@ export default function EmployeeList({ employees, onEdit, onDelete }: EmployeeLi
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-500">
-                    {employee.skills && Array.isArray(employee.skills)
-                      ? employee.skills.join(', ')
-                      : 'No skills'}
+                    {formatSkills(employee.skills)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
