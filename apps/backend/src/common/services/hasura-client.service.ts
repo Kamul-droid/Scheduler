@@ -17,8 +17,35 @@ export class HasuraClientService {
           'x-hasura-admin-secret': hasuraConfig.adminSecret,
         }),
       },
-      timeout: 10000,
+      timeout: 30000, // Increased to 30 seconds
     });
+    
+    // Add request interceptor for logging
+    this.client.interceptors.request.use(
+      (config) => {
+        this.logger.debug(`Hasura request: ${config.method?.toUpperCase()} ${config.url}`);
+        return config;
+      },
+      (error) => {
+        this.logger.error(`Hasura request error: ${error.message}`);
+        return Promise.reject(error);
+      },
+    );
+    
+    // Add response interceptor for error handling
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (axios.isAxiosError(error)) {
+          if (error.code === 'ECONNREFUSED') {
+            this.logger.error(`Hasura connection refused. Is Hasura running at ${baseURL}?`);
+          } else if (error.code === 'ETIMEDOUT') {
+            this.logger.error(`Hasura request timeout after ${this.client.defaults.timeout}ms`);
+          }
+        }
+        return Promise.reject(error);
+      },
+    );
   }
 
   /**

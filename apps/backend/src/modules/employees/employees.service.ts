@@ -177,8 +177,40 @@ export class EmployeesService {
   }
 
   async remove(id: string): Promise<Employee> {
-    // Check if employee exists
-    await this.findOne(id);
+    // First, try to get the employee to return it after deletion
+    // If it doesn't exist, Hasura will return null and we'll handle it
+    const getQuery = `
+      query GetEmployee($id: uuid!) {
+        employees_by_pk(id: $id) {
+          id
+          name
+          email
+          skills
+          availability_pattern
+          metadata
+          created_at
+          updated_at
+        }
+      }
+    `;
+
+    let employeeData: any = null;
+    try {
+      const getResult = await this.hasuraClient.execute<{
+        employees_by_pk: any | null;
+      }>(getQuery, { id });
+      employeeData = getResult.employees_by_pk;
+      
+      if (!employeeData) {
+        throw new NotFoundException(`Employee with ID ${id} not found`);
+      }
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.warn(`Could not fetch employee ${id} before deletion: ${error.message}`);
+      // Continue with deletion attempt - Hasura will handle if it doesn't exist
+    }
 
     const mutation = `
       mutation DeleteEmployee($id: uuid!) {
@@ -192,12 +224,20 @@ export class EmployeesService {
 
     try {
       const result = await this.hasuraClient.execute<{
-        delete_employees_by_pk: Employee;
+        delete_employees_by_pk: any | null;
       }>(mutation, { id });
 
+      if (!result.delete_employees_by_pk) {
+        throw new NotFoundException(`Employee with ID ${id} not found`);
+      }
+
       this.logger.log(`Deleted employee: ${id}`);
-      return result.delete_employees_by_pk;
+      // Return the transformed employee data if we have it, otherwise return the delete result
+      return employeeData ? this.transformEmployee(employeeData) : result.delete_employees_by_pk;
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.logger.error(`Failed to delete employee ${id}: ${error.message}`);
       throw new BadRequestException(
         `Failed to delete employee: ${error.message}`,
