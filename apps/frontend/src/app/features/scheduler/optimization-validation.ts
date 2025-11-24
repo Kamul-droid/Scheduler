@@ -131,19 +131,19 @@ export function validateOptimizationRequest(
     }
   }
 
-  // Context-based warnings (if data is available)
+  // Context-based validation (if data is available)
   if (context) {
     if (context.employeeCount !== undefined && context.employeeCount === 0) {
-      warnings.push({
+      errors.push({
         field: 'employees',
         message: 'No employees available. Optimization requires at least one employee.',
       });
     }
 
     if (context.shiftCount !== undefined && context.shiftCount === 0) {
-      warnings.push({
+      errors.push({
         field: 'shifts',
-        message: 'No shifts found in the selected date range. Optimization requires at least one shift.',
+        message: 'No shifts found in the selected date range. Please select a date range that contains shifts, or create shifts first.',
       });
     }
 

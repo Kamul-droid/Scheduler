@@ -26,33 +26,108 @@ export class OptimizationOrchestrator {
    */
   async optimize(
     optimizationRequest: OptimizationRequestDto,
-  ): Promise<OptimizationResult> {
+    ): Promise<OptimizationResult> {
     const optimizationId = this.generateOptimizationId();
+    const startTime = Date.now();
+
+    this.logger.log(`Starting optimization process`, {
+      optimizationId,
+      startDate: optimizationRequest.startDate,
+      endDate: optimizationRequest.endDate,
+      employeeIds: optimizationRequest.employeeIds,
+      options: optimizationRequest.options,
+    });
 
     try {
       // Step 1: Collect current state
+      this.logger.debug('Step 1: Collecting current state from database');
+      const collectStateStart = Date.now();
       const currentState = await this.collectCurrentState(optimizationRequest);
+      const collectStateTime = Date.now() - collectStateStart;
+      
+      this.logger.log(`Step 1 completed: Collected current state in ${collectStateTime}ms`, {
+        employeeCount: currentState?.employees?.length || 0,
+        shiftCount: currentState?.shifts?.length || 0,
+        constraintCount: currentState?.constraints?.length || 0,
+        scheduleCount: currentState?.currentSchedules?.length || 0,
+      });
+
+      // Validate that we have the minimum required data
+      if (!currentState?.employees || currentState.employees.length === 0) {
+        throw new Error('No employees found. Optimization requires at least one employee.');
+      }
+
+      if (!currentState?.shifts || currentState.shifts.length === 0) {
+        throw new Error(
+          `No shifts found in the specified date range (${optimizationRequest.startDate} to ${optimizationRequest.endDate}). ` +
+          'Please ensure there are shifts in the selected date range, or adjust the date range to include existing shifts.'
+        );
+      }
 
       // Step 2: Call Python optimization service
+      this.logger.debug('Step 2: Calling Python optimization service');
+      const clientCallStart = Date.now();
       const optimizationResponse = await this.optimizationClient.requestOptimization(
         currentState,
       );
+      const clientCallTime = Date.now() - clientCallStart;
+
+      this.logger.log(`Step 2 completed: Received response from container in ${clientCallTime}ms`, {
+        responseOptimizationId: optimizationResponse?.optimizationId,
+        responseStatus: optimizationResponse?.status,
+        rawSolutionCount: Array.isArray(optimizationResponse?.solutions) 
+          ? optimizationResponse.solutions.length 
+          : 0,
+        totalSolveTime: optimizationResponse?.totalSolveTime,
+        responseMessage: optimizationResponse?.message,
+        responseKeys: optimizationResponse ? Object.keys(optimizationResponse) : [],
+      });
+
+      // Log raw response structure for debugging
+      this.logger.debug('Raw optimization response from container', {
+        fullResponse: JSON.stringify(optimizationResponse, null, 2),
+      });
 
       // Step 3: Validate solutions
+      this.logger.debug('Step 3: Validating solutions');
+      const validateStart = Date.now();
       const validatedSolutions = await this.validateSolutions(
         optimizationResponse.solutions || [],
       );
+      const validateTime = Date.now() - validateStart;
+
+      this.logger.log(`Step 3 completed: Validated solutions in ${validateTime}ms`, {
+        rawSolutionCount: Array.isArray(optimizationResponse?.solutions) 
+          ? optimizationResponse.solutions.length 
+          : 0,
+        validatedSolutionCount: validatedSolutions.length,
+        filteredOut: (Array.isArray(optimizationResponse?.solutions) 
+          ? optimizationResponse.solutions.length 
+          : 0) - validatedSolutions.length,
+      });
 
       // Step 4: Create result
+      this.logger.debug('Step 4: Creating final result');
       const finalOptimizationId = optimizationResponse.optimizationId || optimizationId;
+      
+      // Determine status with detailed logging
+      let finalStatus: OptimizationStatus;
+      if (optimizationResponse.status === 'completed') {
+        finalStatus = OptimizationStatus.COMPLETED;
+      } else if (optimizationResponse.status === 'partial') {
+        finalStatus = OptimizationStatus.PARTIAL;
+      } else {
+        finalStatus = OptimizationStatus.FAILED;
+      }
+
+      this.logger.debug('Status mapping', {
+        rawStatus: optimizationResponse.status,
+        mappedStatus: finalStatus,
+      });
+
       const result: OptimizationResult = {
         optimizationId: finalOptimizationId,
-        status:
-          optimizationResponse.status === 'completed'
-            ? OptimizationStatus.COMPLETED
-            : optimizationResponse.status === 'partial'
-              ? OptimizationStatus.PARTIAL
-              : OptimizationStatus.FAILED,
+        status: finalStatus,
         solutions: validatedSolutions,
         totalSolveTime: optimizationResponse.totalSolveTime || 0,
         message:
@@ -63,11 +138,38 @@ export class OptimizationOrchestrator {
       // Store result using the final optimization ID (from response or generated)
       this.optimizationResults.set(finalOptimizationId, result);
 
+      const totalTime = Date.now() - startTime;
+      this.logger.log(`Optimization process completed successfully in ${totalTime}ms`, {
+        optimizationId: finalOptimizationId,
+        status: finalStatus,
+        solutionCount: validatedSolutions.length,
+        totalSolveTime: result.totalSolveTime,
+        message: result.message,
+      });
+
+      // Log final result structure
+      this.logger.debug('Final optimization result', {
+        result: JSON.stringify(result, null, 2),
+      });
+
       return result;
     } catch (error) {
+      const totalTime = Date.now() - startTime;
+      
       this.logger.error(
-        `Optimization failed: ${error.message}`,
-        error.stack,
+        `Optimization failed after ${totalTime}ms: ${error.message}`,
+        {
+          optimizationId,
+          errorName: error instanceof Error ? error.name : 'Unknown',
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorStack: error instanceof Error ? error.stack : undefined,
+          requestDetails: {
+            startDate: optimizationRequest.startDate,
+            endDate: optimizationRequest.endDate,
+            employeeIds: optimizationRequest.employeeIds,
+            options: optimizationRequest.options,
+          },
+        },
       );
 
       const result: OptimizationResult = {
@@ -79,6 +181,11 @@ export class OptimizationOrchestrator {
       };
 
       this.optimizationResults.set(optimizationId, result);
+      
+      this.logger.debug('Error result stored', {
+        result: JSON.stringify(result, null, 2),
+      });
+
       return result;
     }
   }
@@ -89,6 +196,13 @@ export class OptimizationOrchestrator {
   private async collectCurrentState(
     request: OptimizationRequestDto,
   ): Promise<any> {
+    this.logger.debug('Collecting current state', {
+      startDate: request.startDate,
+      endDate: request.endDate,
+      employeeIds: request.employeeIds,
+      hasOptions: !!request.options,
+    });
+
     const state: any = {
       employees: [],
       shifts: [],
@@ -101,6 +215,7 @@ export class OptimizationOrchestrator {
     try {
       // Collect employees
       if (request.employeeIds && request.employeeIds.length > 0) {
+        this.logger.debug(`Fetching ${request.employeeIds.length} specific employees`);
         const employeeQuery = `
           query GetEmployees($ids: [uuid!]!) {
             employees(where: { id: { _in: $ids } }) {
@@ -117,7 +232,9 @@ export class OptimizationOrchestrator {
           employees: any[];
         }>(employeeQuery, { ids: request.employeeIds });
         state.employees = employeeResult.employees || [];
+        this.logger.debug(`Fetched ${state.employees.length} employees`);
       } else {
+        this.logger.debug('Fetching all employees');
         const allEmployeesQuery = `
           query GetAllEmployees {
             employees {
@@ -134,9 +251,14 @@ export class OptimizationOrchestrator {
           employees: any[];
         }>(allEmployeesQuery);
         state.employees = allEmployeesResult.employees || [];
+        this.logger.debug(`Fetched ${state.employees.length} employees`);
       }
 
       // Collect shifts (filter by date range if needed)
+      this.logger.debug('Fetching shifts in date range', {
+        startDate: request.startDate,
+        endDate: request.endDate,
+      });
       const shiftQuery = `
         query GetShifts($startDate: timestamptz!, $endDate: timestamptz!) {
           shifts(
@@ -160,9 +282,53 @@ export class OptimizationOrchestrator {
         shiftQuery,
         { startDate: request.startDate, endDate: request.endDate },
       );
-      state.shifts = shiftResult.shifts || [];
+      const rawShifts = shiftResult.shifts || [];
+      this.logger.debug(`Fetched ${rawShifts.length} shifts from database`);
+      
+      // Transform shifts: convert required_skills from list to dictionary format
+      // Python optimizer expects Dict[str, Any] but Hasura returns list format
+      state.shifts = rawShifts.map((shift) => {
+        const transformed = { ...shift };
+        
+        // Transform required_skills from list to dict format
+        if (shift.required_skills) {
+          if (Array.isArray(shift.required_skills)) {
+            // Convert list format [{'name': 'skill'}] or ['skill'] to dict {'skill': true}
+            const skillsDict: Record<string, any> = {};
+            shift.required_skills.forEach((skill: any) => {
+              const skillName = typeof skill === 'string' 
+                ? skill 
+                : (skill?.name || String(skill));
+              if (skillName) {
+                skillsDict[skillName] = true;
+              }
+            });
+            transformed.required_skills = Object.keys(skillsDict).length > 0 ? skillsDict : null;
+          } else if (typeof shift.required_skills === 'object' && !Array.isArray(shift.required_skills)) {
+            // Already a dict, keep as is
+            transformed.required_skills = shift.required_skills;
+          } else {
+            // Invalid format, set to null
+            transformed.required_skills = null;
+          }
+        } else {
+          transformed.required_skills = null;
+        }
+        
+        return transformed;
+      });
+      
+      this.logger.debug(`Transformed ${state.shifts.length} shifts for optimizer`, {
+        sampleShift: state.shifts.length > 0 ? {
+          id: state.shifts[0].id,
+          required_skills: state.shifts[0].required_skills,
+          start_time: state.shifts[0].start_time,
+          end_time: state.shifts[0].end_time,
+        } : null,
+      });
 
       // Collect active constraints
+      this.logger.debug('Fetching active constraints');
       const constraintsQuery = `
         query GetActiveConstraints {
           constraints(where: { active: { _eq: true } }, order_by: { priority: desc }) {
@@ -191,8 +357,10 @@ export class OptimizationOrchestrator {
         }
         return transformed;
       });
+      this.logger.debug(`Fetched and transformed ${state.constraints.length} constraints`);
 
       // Fetch current schedules in date range
+      this.logger.debug('Fetching current schedules in date range');
       const schedulesQuery = `
         query GetSchedules($startDate: timestamptz!, $endDate: timestamptz!) {
           schedules(
@@ -217,10 +385,26 @@ export class OptimizationOrchestrator {
         endDate: request.endDate,
       });
       state.currentSchedules = schedulesResult.schedules || [];
+      this.logger.debug(`Fetched ${state.currentSchedules.length} existing schedules`);
+      
+      this.logger.debug('State collection summary', {
+        employeeCount: state.employees.length,
+        shiftCount: state.shifts.length,
+        constraintCount: state.constraints.length,
+        scheduleCount: state.currentSchedules.length,
+      });
     } catch (error) {
       this.logger.error(
         `Failed to collect current state: ${error.message}`,
-        error.stack,
+        {
+          errorName: error instanceof Error ? error.name : 'Unknown',
+          errorStack: error instanceof Error ? error.stack : undefined,
+          requestDetails: {
+            startDate: request.startDate,
+            endDate: request.endDate,
+            employeeIds: request.employeeIds,
+          },
+        },
       );
       throw error;
     }
@@ -232,32 +416,97 @@ export class OptimizationOrchestrator {
    * Validates optimization solutions
    */
   private async validateSolutions(solutions: any[]): Promise<any[]> {
+    this.logger.debug('Validating solutions', {
+      inputSolutionCount: Array.isArray(solutions) ? solutions.length : 0,
+      isArray: Array.isArray(solutions),
+      type: typeof solutions,
+    });
+
     // Basic validation - check that solutions have required structure
     if (!Array.isArray(solutions)) {
+      this.logger.warn('Solutions is not an array', {
+        type: typeof solutions,
+        value: solutions,
+      });
       return [];
     }
 
-    return solutions
-      .filter((solution) => {
-        return (
+    if (solutions.length === 0) {
+      this.logger.warn('No solutions provided for validation');
+      return [];
+    }
+
+    const validated = solutions
+      .map((solution, index) => {
+        const isValid = (
           solution &&
           typeof solution === 'object' &&
           Array.isArray(solution.assignments) &&
           typeof solution.score === 'number'
         );
+
+        if (!isValid) {
+          this.logger.debug(`Solution ${index} failed validation`, {
+            hasSolution: !!solution,
+            isObject: solution && typeof solution === 'object',
+            hasAssignments: solution && Array.isArray(solution.assignments),
+            hasScore: solution && typeof solution.score === 'number',
+            solutionKeys: solution ? Object.keys(solution) : [],
+          });
+        }
+
+        return { solution, isValid, index };
       })
-      .map((solution) => ({
-        id: solution.id || `solution_${Date.now()}`,
-        score: solution.score,
-        assignments: solution.assignments.map((a: any) => ({
-          employeeId: a.employeeId,
-          shiftId: a.shiftId,
-          startTime: new Date(a.startTime),
-          endTime: new Date(a.endTime),
-        })),
-        metrics: solution.metrics || {},
-        solveTime: solution.solveTime || 0,
-      }));
+      .filter(({ isValid }) => isValid)
+      .map(({ solution, index }) => {
+        try {
+          const transformed = {
+            id: solution.id || `solution_${Date.now()}_${index}`,
+            score: solution.score,
+            assignments: solution.assignments.map((a: any, assignmentIndex: number) => {
+              try {
+                return {
+                  employeeId: a.employeeId,
+                  shiftId: a.shiftId,
+                  startTime: new Date(a.startTime),
+                  endTime: new Date(a.endTime),
+                };
+              } catch (assignmentError) {
+                this.logger.warn(`Failed to transform assignment ${assignmentIndex} in solution ${index}`, {
+                  assignment: a,
+                  error: assignmentError instanceof Error ? assignmentError.message : String(assignmentError),
+                });
+                throw assignmentError;
+              }
+            }),
+            metrics: solution.metrics || {},
+            solveTime: solution.solveTime || 0,
+          };
+          
+          this.logger.debug(`Solution ${index} validated and transformed`, {
+            solutionId: transformed.id,
+            score: transformed.score,
+            assignmentCount: transformed.assignments.length,
+            solveTime: transformed.solveTime,
+          });
+          
+          return transformed;
+        } catch (transformError) {
+          this.logger.error(`Failed to transform solution ${index}`, {
+            error: transformError instanceof Error ? transformError.message : String(transformError),
+            solution: solution,
+          });
+          throw transformError;
+        }
+      });
+
+    this.logger.log('Solution validation completed', {
+      inputCount: solutions.length,
+      validatedCount: validated.length,
+      filteredOut: solutions.length - validated.length,
+    });
+
+    return validated;
   }
 
   /**

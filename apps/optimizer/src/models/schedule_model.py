@@ -1,6 +1,7 @@
 """Schedule and shift data models."""
 from datetime import datetime
 from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -20,8 +21,12 @@ class Shift(BaseModel):
         if not self.required_skills:
             return []
         if isinstance(self.required_skills, list):
+            # Array format: [{ name: 'skill' }] or ['skill']
             return [skill.get('name', skill) if isinstance(skill, dict) else str(skill)
                     for skill in self.required_skills]
+        elif isinstance(self.required_skills, dict):
+            # Dictionary format: { 'skill': true } (from backend transformation)
+            return list(self.required_skills.keys())
         return []
 
     def get_duration_hours(self) -> float:

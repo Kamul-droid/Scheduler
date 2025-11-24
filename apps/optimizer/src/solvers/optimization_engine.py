@@ -140,16 +140,22 @@ class OptimizationEngine:
             period_days = constraint.get_period_days() or 7
             
             if max_hours:
+                # Convert hours to minutes (integers) for OR-Tools CP-SAT
+                # CP-SAT requires integer coefficients for linear constraints
+                max_minutes = int(max_hours * 60)
+                
                 # Calculate hours per employee for shifts in the period
                 for emp_idx, employee in enumerate(self.employees):
-                    total_hours = []
+                    total_minutes = []
                     for shift_idx, shift in enumerate(self.shifts):
                         hours = shift.get_duration_hours()
-                        total_hours.append(
-                            self.employee_shift[emp_idx][shift_idx] * hours
+                        # Convert hours to minutes (integer)
+                        minutes = int(round(hours * 60))
+                        total_minutes.append(
+                            self.employee_shift[emp_idx][shift_idx] * minutes
                         )
-                    if total_hours:
-                        self.model.Add(sum(total_hours) <= max_hours)
+                    if total_minutes:
+                        self.model.Add(sum(total_minutes) <= max_minutes)
 
     def _add_min_rest_constraints(self):
         """Add minimum rest between shifts constraints."""
@@ -229,26 +235,50 @@ class OptimizationEngine:
         for emp_idx in range(len(self.employees)):
             for shift_idx, shift in enumerate(self.shifts):
                 hours = shift.get_duration_hours()
+                # Convert hours to minutes (integer) for OR-Tools CP-SAT
+                minutes = int(round(hours * 60))
                 # Simple cost model: cost increases with hours
-                cost.append(self.employee_shift[emp_idx][shift_idx] * hours)
+                cost.append(self.employee_shift[emp_idx][shift_idx] * minutes)
         self.model.Minimize(sum(cost))
 
     def _maximize_fairness(self):
         """Maximize fairness (minimize variance in hours)."""
         # Simplified: minimize difference between max and min hours per employee
-        employee_hours = []
+        # Use integer variables for hours (in minutes)
+        employee_hours_vars = []
         for emp_idx in range(len(self.employees)):
-            hours = [
-                self.employee_shift[emp_idx][shift_idx] * shift.get_duration_hours()
-                for shift_idx, shift in enumerate(self.shifts)
-            ]
-            employee_hours.append(sum(hours) if hours else 0)
+            hours_terms = []
+            for shift_idx, shift in enumerate(self.shifts):
+                hours = shift.get_duration_hours()
+                # Convert hours to minutes (integer) for OR-Tools CP-SAT
+                minutes = int(round(hours * 60))
+                hours_terms.append(
+                    self.employee_shift[emp_idx][shift_idx] * minutes
+                )
+            if hours_terms:
+                # Create integer variable for total hours (in minutes)
+                total_minutes = self.model.NewIntVar(0, 10000, f'emp_{emp_idx}_total_minutes')
+                self.model.Add(total_minutes == sum(hours_terms))
+                employee_hours_vars.append(total_minutes)
+            else:
+                zero_var = self.model.NewIntVar(0, 0, f'emp_{emp_idx}_total_minutes')
+                employee_hours_vars.append(zero_var)
         
-        # Minimize variance (simplified)
-        if employee_hours:
-            max_hours = max(employee_hours)
-            min_hours = min(employee_hours)
-            self.model.Minimize(max_hours - min_hours)
+        # Minimize variance (simplified: minimize max - min)
+        if employee_hours_vars:
+            max_hours_var = self.model.NewIntVar(0, 10000, 'max_hours')
+            min_hours_var = self.model.NewIntVar(0, 10000, 'min_hours')
+            
+            # max_hours_var >= all employee hours
+            for hours_var in employee_hours_vars:
+                self.model.Add(max_hours_var >= hours_var)
+            
+            # min_hours_var <= all employee hours
+            for hours_var in employee_hours_vars:
+                self.model.Add(min_hours_var <= hours_var)
+            
+            # Minimize the difference
+            self.model.Minimize(max_hours_var - min_hours_var)
 
     def _balance_objective(self):
         """Balance cost and fairness."""
@@ -257,7 +287,9 @@ class OptimizationEngine:
         for emp_idx in range(len(self.employees)):
             for shift_idx, shift in enumerate(self.shifts):
                 hours = shift.get_duration_hours()
-                cost.append(self.employee_shift[emp_idx][shift_idx] * hours)
+                # Convert hours to minutes (integer) for OR-Tools CP-SAT
+                minutes = int(round(hours * 60))
+                cost.append(self.employee_shift[emp_idx][shift_idx] * minutes)
         
         if cost:
             self.model.Minimize(sum(cost))

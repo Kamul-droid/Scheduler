@@ -402,95 +402,76 @@
       "type": "max_hours",
       "rules": {
         "maxHoursPerWeek": 40,
-        "maxHoursPerDay": 12,
-        "maxConsecutiveDays": 5,
-        "overtimeAllowed": false
+        "maxHoursPerDay": 12
       },
       "priority": 90,
-      "active": true,
-      "metadata": {
-        "description": "Standard work hour limits",
-        "appliesTo": "all_employees",
-        "enforcement": "strict"
-      }
+      "active": true
     },
     {
       "type": "min_rest",
       "rules": {
-        "minRestHours": 11,
-        "minRestBetweenShifts": 11,
-        "enforceAfterNightShift": true
+        "minRestHours": 11
       },
       "priority": 95,
-      "active": true,
-      "metadata": {
-        "description": "Minimum rest period between shifts",
-        "appliesTo": "all_employees",
-        "enforcement": "strict",
-        "regulatory": true
-      }
+      "active": true
     },
     {
       "type": "fair_distribution",
       "rules": {
-        "shiftType": "weekend",
-        "distributionMethod": "equal",
-        "maxWeekendsPerMonth": 2,
-        "preferRotation": true
+        "maxShiftsPerEmployee": 20
       },
       "priority": 70,
-      "active": true,
-      "metadata": {
-        "description": "Fair weekend shift distribution",
-        "appliesTo": "all_employees",
-        "enforcement": "preferred"
-      }
+      "active": true
     },
     {
       "type": "skill_requirement",
       "rules": {
-        "requiredCertifications": ["ACLS", "BLS"],
-        "minExperience": 2,
-        "enforceForDepartments": ["Emergency Department", "Intensive Care Unit"]
+        "requiredSkills": ["ACLS", "BLS", "Emergency Medicine", "Critical Care"]
       },
       "priority": 100,
-      "active": true,
-      "metadata": {
-        "description": "Certification requirements for critical departments",
-        "appliesTo": "specific_departments",
-        "enforcement": "strict",
-        "regulatory": true
-      }
+      "active": true
     },
     {
       "type": "availability",
       "rules": {
-        "respectUnavailableDays": true,
-        "respectPreferredShifts": true,
-        "allowOverride": false
+        "availabilityWindows": [
+          {
+            "dayOfWeek": 1,
+            "startTime": "08:00",
+            "endTime": "17:00"
+          },
+          {
+            "dayOfWeek": 2,
+            "startTime": "08:00",
+            "endTime": "17:00"
+          },
+          {
+            "dayOfWeek": 3,
+            "startTime": "08:00",
+            "endTime": "17:00"
+          },
+          {
+            "dayOfWeek": 4,
+            "startTime": "08:00",
+            "endTime": "17:00"
+          },
+          {
+            "dayOfWeek": 5,
+            "startTime": "08:00",
+            "endTime": "17:00"
+          }
+        ]
       },
       "priority": 60,
-      "active": true,
-      "metadata": {
-        "description": "Respect employee availability preferences",
-        "appliesTo": "all_employees",
-        "enforcement": "preferred"
-      }
+      "active": true
     },
     {
       "type": "max_consecutive_days",
       "rules": {
-        "maxConsecutiveDays": 5,
-        "requireRestAfter": true,
-        "restDaysRequired": 2
+        "maxDays": 5
       },
       "priority": 80,
-      "active": true,
-      "metadata": {
-        "description": "Maximum consecutive working days",
-        "appliesTo": "all_employees",
-        "enforcement": "strict"
-      }
+      "active": true
     }
   ],
   "schedules": [

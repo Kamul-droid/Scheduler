@@ -317,11 +317,24 @@ export class RuleEngineService {
 
       const requiredSkills = rules.requiredSkills || [];
       const employeeSkills = employeeResult.employees_by_pk?.skills || [];
+      
+      // Extract employee skill names
       const employeeSkillNames = Array.isArray(employeeSkills)
-        ? employeeSkills.map((s: any) => s.name || s)
+        ? employeeSkills.map((s: any) => {
+            if (typeof s === 'string') return s;
+            return s?.name || String(s);
+          })
         : [];
 
-      return requiredSkills.every((skill) => employeeSkillNames.includes(skill));
+      // Extract required skill names (should be array of strings from constraint rules)
+      const requiredSkillNames = Array.isArray(requiredSkills)
+        ? requiredSkills.map((s: any) => {
+            if (typeof s === 'string') return s;
+            return s?.name || String(s);
+          })
+        : [];
+
+      return requiredSkillNames.every((skill) => employeeSkillNames.includes(skill));
     } catch (error) {
       this.logger.error(`Error evaluating skill matching: ${error.message}`);
       return false;

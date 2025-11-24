@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle, Loader2, XCircle, Zap } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { optimizationApi, shiftsApi } from '../../../lib/api';
+import { optimizationApi, schedulesApi, shiftsApi } from '../../../lib/api';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { useEmployees } from '../../hooks';
@@ -14,6 +14,7 @@ import {
 export default function OptimizationPanel() {
   const { employees } = useEmployees();
   const { constraints } = useActiveConstraints();
+  const queryClient = useQueryClient();
   
   // Fetch shifts for date range validation
   const { data: shifts = [] } = useQuery({
@@ -23,6 +24,9 @@ export default function OptimizationPanel() {
 
   const [optimizationId, setOptimizationId] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [applyingSolutionId, setApplyingSolutionId] = useState<string | null>(null);
+  const [applySuccess, setApplySuccess] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
   
   // Form state
   const [startDate, setStartDate] = useState(() => {
@@ -45,14 +49,21 @@ export default function OptimizationPanel() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
-  const { data: optimizationResult, isLoading: isLoadingResult } = useQuery({
+  const { data: optimizationResult, isLoading: isLoadingResult, error: statusError } = useQuery({
     queryKey: ['optimization', optimizationId],
-    queryFn: () => optimizationApi.getStatus(optimizationId!),
+    queryFn: async () => {
+      console.log(`Fetching optimization status for ID: ${optimizationId}`);
+      const result = await optimizationApi.getStatus(optimizationId!);
+      console.log('Optimization status received:', result);
+      return result;
+    },
     enabled: !!optimizationId,
     refetchInterval: (query) => {
       // Poll until optimization is complete
       const data = query.state.data as any;
-      if (data?.status === 'completed' || data?.status === 'failed') {
+      const status = data?.status;
+      // Stop polling when optimization is completed, partial, or failed
+      if (status === 'completed' || status === 'partial' || status === 'failed') {
         return false;
       }
       return 2000; // Poll every 2 seconds
@@ -111,14 +122,21 @@ export default function OptimizationPanel() {
 
     setIsOptimizing(true);
     try {
+      console.log('Starting optimization request:', request);
       const response = await optimizationApi.optimize(request);
+      console.log('Optimization response received:', response);
+      
+      if (!response || !response.optimizationId) {
+        throw new Error('Invalid response from optimization service');
+      }
+      
       setOptimizationId(response.optimizationId);
       // Clear validation on success
       setValidationErrors([]);
       setValidationWarnings([]);
     } catch (error: any) {
       console.error('Optimization failed:', error);
-      const errorMessage = error?.message || 'Failed to start optimization. Please try again.';
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to start optimization. Please try again.';
       setValidationErrors([errorMessage]);
     } finally {
       setIsOptimizing(false);
@@ -126,13 +144,82 @@ export default function OptimizationPanel() {
   };
 
   const handleApplySolution = async (solutionId: string) => {
-    // Apply the selected solution to the database
-    if (optimizationResult?.solutions) {
-      const solution = optimizationResult.solutions.find((s: any) => s.id === solutionId);
-      if (solution) {
-        // TODO: Implement solution application via GraphQL mutations
-        alert(`Applying solution ${solutionId}...`);
+    if (!optimizationResult?.solutions) {
+      setApplyError('No solutions available');
+      return;
+    }
+
+    const solution = optimizationResult.solutions.find((s: any) => s.id === solutionId);
+    if (!solution) {
+      setApplyError('Solution not found');
+      return;
+    }
+
+    if (!solution.assignments || solution.assignments.length === 0) {
+      setApplyError('Solution has no assignments to apply');
+      return;
+    }
+
+    setApplyingSolutionId(solutionId);
+    setApplyError(null);
+    setApplySuccess(null);
+
+    try {
+      console.log(`Applying solution ${solutionId} with ${solution.assignments.length} assignments`);
+      
+      // Create schedules for each assignment
+      const createPromises = solution.assignments.map(async (assignment: any) => {
+        const scheduleData = {
+          employeeId: assignment.employeeId,
+          shiftId: assignment.shiftId,
+          startTime: typeof assignment.startTime === 'string' 
+            ? assignment.startTime 
+            : new Date(assignment.startTime).toISOString(),
+          endTime: typeof assignment.endTime === 'string'
+            ? assignment.endTime
+            : new Date(assignment.endTime).toISOString(),
+          status: 'confirmed' as const,
+        };
+
+        return schedulesApi.create(scheduleData);
+      });
+
+      // Wait for all schedules to be created
+      const results = await Promise.allSettled(createPromises);
+      
+      // Count successes and failures
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+
+      if (failed === 0) {
+        setApplySuccess(`Successfully applied solution! Created ${successful} schedule(s).`);
+        // Clear error state
+        setApplyError(null);
+        
+        // Refresh schedules list to show new schedules
+        queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      } else if (successful > 0) {
+        setApplySuccess(`Partially applied: ${successful} schedule(s) created, ${failed} failed.`);
+        setApplyError(`Some schedules could not be created. Check console for details.`);
+        // Log failed attempts
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`Failed to create schedule ${index + 1}:`, result.reason);
+          }
+        });
+      } else {
+        setApplyError(`Failed to apply solution. All ${failed} schedule(s) failed to create.`);
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`Failed to create schedule ${index + 1}:`, result.reason);
+          }
+        });
       }
+    } catch (error: any) {
+      console.error('Error applying solution:', error);
+      setApplyError(error?.message || 'Failed to apply solution. Please try again.');
+    } finally {
+      setApplyingSolutionId(null);
     }
   };
 
@@ -310,6 +397,41 @@ export default function OptimizationPanel() {
         </div>
       </div>
 
+      {/* Apply Solution Success/Error Messages */}
+      {applySuccess && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-green-700">{applySuccess}</p>
+            </div>
+            <button
+              onClick={() => setApplySuccess(null)}
+              className="text-green-600 hover:text-green-800"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {applyError && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-red-700">{applyError}</p>
+            </div>
+            <button
+              onClick={() => setApplyError(null)}
+              className="text-red-600 hover:text-red-800"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Optimization Results */}
       {optimizationId && (
         <div className="card">
@@ -320,11 +442,20 @@ export default function OptimizationPanel() {
               <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary-600 mb-2" />
               <p className="text-gray-500">Optimizing schedule...</p>
             </div>
-          ) : optimizationResult?.status === 'completed' ? (
+          ) : statusError ? (
+            <div className="flex items-center gap-2 text-red-600">
+              <XCircle className="w-5 h-5" />
+              <span>Failed to fetch optimization status. Please try again.</span>
+            </div>
+          ) : optimizationResult?.status === 'completed' || optimizationResult?.status === 'partial' ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-green-600">
+              <div className={`flex items-center gap-2 ${optimizationResult?.status === 'completed' ? 'text-green-600' : 'text-yellow-600'}`}>
                 <CheckCircle className="w-5 h-5" />
-                <span className="font-medium">Optimization completed successfully</span>
+                <span className="font-medium">
+                  {optimizationResult?.status === 'completed' 
+                    ? 'Optimization completed successfully' 
+                    : 'Optimization completed with partial results'}
+                </span>
               </div>
 
               {optimizationResult.solutions && optimizationResult.solutions.length > 0 ? (
@@ -339,18 +470,44 @@ export default function OptimizationPanel() {
                           <h4 className="font-semibold text-gray-900">
                             Solution {index + 1}
                           </h4>
-                          {solution.metrics && (
-                            <div className="mt-2 text-sm text-gray-600">
-                              <div>Score: {solution.metrics.score || 'N/A'}</div>
-                              <div>Coverage: {solution.metrics.coverage || 'N/A'}%</div>
-                            </div>
-                          )}
+                          <div className="mt-2 text-sm text-gray-600">
+                            <div>Score: {solution.score?.toFixed(2) || 'N/A'}</div>
+                            {solution.metrics && (
+                              <>
+                                {solution.metrics.coverage !== undefined && (
+                                  <div>Coverage: {solution.metrics.coverage.toFixed(1)}%</div>
+                                )}
+                                {solution.metrics.totalCost !== undefined && (
+                                  <div>Total Cost: ${solution.metrics.totalCost.toFixed(2)}</div>
+                                )}
+                                {solution.metrics.fairnessScore !== undefined && (
+                                  <div>Fairness: {solution.metrics.fairnessScore.toFixed(2)}</div>
+                                )}
+                                {solution.metrics.constraintViolations !== undefined && (
+                                  <div>Violations: {solution.metrics.constraintViolations}</div>
+                                )}
+                              </>
+                            )}
+                            {solution.solveTime && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Solved in {solution.solveTime}ms
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <Button
                           onClick={() => handleApplySolution(solution.id)}
                           variant="primary"
+                          disabled={applyingSolutionId === solution.id}
                         >
-                          Apply Solution
+                          {applyingSolutionId === solution.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Applying...
+                            </>
+                          ) : (
+                            'Apply Solution'
+                          )}
                         </Button>
                       </div>
                       {solution.assignments && (
@@ -368,9 +525,16 @@ export default function OptimizationPanel() {
               )}
             </div>
           ) : optimizationResult?.status === 'failed' ? (
-            <div className="flex items-center gap-2 text-red-600">
-              <XCircle className="w-5 h-5" />
-              <span>Optimization failed. Please try again.</span>
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-red-900 mb-1">Optimization Failed</h4>
+                  <p className="text-sm text-red-700">
+                    {optimizationResult?.message || 'Optimization failed. Please try again.'}
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-center py-8">

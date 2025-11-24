@@ -135,13 +135,33 @@ export class ConflictDetectionService {
       const requiredSkills = shiftResult.shifts_by_pk?.required_skills;
       const employeeSkills = employeeResult.employees_by_pk?.skills;
 
-      if (requiredSkills && Array.isArray(requiredSkills)) {
-        const employeeSkillNames = Array.isArray(employeeSkills)
-          ? employeeSkills.map((s: any) => s.name || s)
-          : [];
+      // Extract employee skill names
+      const employeeSkillNames = Array.isArray(employeeSkills)
+        ? employeeSkills.map((s: any) => {
+            if (typeof s === 'string') return s;
+            return s?.name || String(s);
+          })
+        : [];
 
-        const missingSkills = requiredSkills.filter(
-          (reqSkill: string) => !employeeSkillNames.includes(reqSkill),
+      // Extract required skill names from various formats
+      let requiredSkillNames: string[] = [];
+      
+      if (requiredSkills) {
+        if (Array.isArray(requiredSkills)) {
+          // Array format: [{ name: 'skill' }] or ['skill']
+          requiredSkillNames = requiredSkills.map((s: any) => {
+            if (typeof s === 'string') return s;
+            return s?.name || String(s);
+          });
+        } else if (typeof requiredSkills === 'object' && !Array.isArray(requiredSkills)) {
+          // Dictionary format: { 'skill': true } (from optimizer transformation)
+          requiredSkillNames = Object.keys(requiredSkills);
+        }
+      }
+
+      if (requiredSkillNames.length > 0) {
+        const missingSkills = requiredSkillNames.filter(
+          (reqSkillName: string) => !employeeSkillNames.includes(reqSkillName),
         );
 
         if (missingSkills.length > 0) {

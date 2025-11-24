@@ -75,24 +75,87 @@ export function seedPlatformData() {
     );
   });
 
-  // Create schedules (need employee and shift IDs)
-  cy.wait(1000).then(() => {
-    const schedulesWithIds = testData.schedules.map((schedule, index) => {
-      const employee = createdData.employees[index % createdData.employees.length];
-      const shift = createdData.shifts[index % createdData.shifts.length];
-      return {
-        ...schedule,
-        employeeId: employee?.id || '',
-        shiftId: shift?.id || '',
-      };
+  // Helper function to extract skill names from employee skills array
+  const getEmployeeSkillNames = (employee: any): string[] => {
+    if (!employee?.skills || !Array.isArray(employee.skills)) {
+      return [];
+    }
+    return employee.skills.map((skill: any) => {
+      if (typeof skill === 'string') return skill;
+      return skill?.name || String(skill);
     });
+  };
+  
+  // Helper function to extract required skill names from shift
+  const getShiftRequiredSkillNames = (shift: any): string[] => {
+    const requiredSkills = shift?.requiredSkills || shift?.required_skills;
+    if (!requiredSkills) return [];
+    if (Array.isArray(requiredSkills)) {
+      return requiredSkills.map((skill: any) => {
+        if (typeof skill === 'string') return skill;
+        return skill?.name || String(skill);
+      });
+    }
+    // If it's a dict (from optimizer transformation), extract keys
+    if (typeof requiredSkills === 'object' && !Array.isArray(requiredSkills)) {
+      return Object.keys(requiredSkills);
+    }
+    return [];
+  };
+  
+  // Helper function to check if employee has required skills for shift
+  const employeeHasRequiredSkills = (employee: any, shift: any): boolean => {
+    const employeeSkills = getEmployeeSkillNames(employee);
+    const shiftRequiredSkills = getShiftRequiredSkillNames(shift);
+    
+    if (shiftRequiredSkills.length === 0) {
+      return true; // No requirements, any employee can work
+    }
+    
+    // Employee must have ALL required skills
+    return shiftRequiredSkills.every(skill => employeeSkills.includes(skill));
+  };
 
+  // Create schedules (need employee and shift IDs) with skill validation
+  cy.wait(1000).then(() => {
+    const validSchedules: any[] = [];
+    
+    // Match employees to shifts based on skills
+    for (const schedule of testData.schedules) {
+      let matched = false;
+      for (const employee of createdData.employees) {
+        for (const shift of createdData.shifts) {
+          if (employeeHasRequiredSkills(employee, shift)) {
+            validSchedules.push({
+              ...schedule,
+              employeeId: employee.id,
+              shiftId: shift.id,
+              startTime: schedule.startTime || shift.startTime || shift.start_time,
+              endTime: schedule.endTime || shift.endTime || shift.end_time,
+            });
+            matched = true;
+            break;
+          }
+        }
+        if (matched) break;
+      }
+    }
+
+    // Create validated schedules
     return Cypress.Promise.all(
-      schedulesWithIds.map((schedule) =>
+      validSchedules.map((schedule) =>
         cy
-          .request('POST', `${API_BASE}/schedules`, schedule)
+          .request({
+            method: 'POST',
+            url: `${API_BASE}/schedules`,
+            body: schedule,
+            failOnStatusCode: false,
+          })
           .then((response) => {
-            createdData.schedules.push(response.body);
+            // Only add if successfully created
+            if (response.status === 201 || response.status === 200) {
+              createdData.schedules.push(response.body);
+            }
           })
       )
     );

@@ -284,16 +284,62 @@ Cypress.Commands.add('seedPlatformData', () => {
 
   cy.wait(1000);
 
-  // Create schedules with employee and shift IDs
-  testData.schedules.forEach((schedule, index) => {
-    const employee = createdData.employees[index % createdData.employees.length];
-    const shift = createdData.shifts[index % createdData.shifts.length];
-    if (employee && shift) {
-      cy.request('POST', `${API_BASE}/schedules`, {
-        ...schedule,
-        employeeId: employee.id,
-        shiftId: shift.id,
+  // Helper function to extract skill names
+  const getEmployeeSkillNames = (employee: any): string[] => {
+    if (!employee?.skills || !Array.isArray(employee.skills)) return [];
+    return employee.skills.map((skill: any) => {
+      if (typeof skill === 'string') return skill;
+      return skill?.name || String(skill);
+    });
+  };
+  
+  const getShiftRequiredSkillNames = (shift: any): string[] => {
+    const requiredSkills = shift?.requiredSkills || shift?.required_skills;
+    if (!requiredSkills) return [];
+    if (Array.isArray(requiredSkills)) {
+      return requiredSkills.map((skill: any) => {
+        if (typeof skill === 'string') return skill;
+        return skill?.name || String(skill);
       });
+    }
+    if (typeof requiredSkills === 'object' && !Array.isArray(requiredSkills)) {
+      return Object.keys(requiredSkills);
+    }
+    return [];
+  };
+  
+  const employeeHasRequiredSkills = (employee: any, shift: any): boolean => {
+    const employeeSkills = getEmployeeSkillNames(employee);
+    const shiftRequiredSkills = getShiftRequiredSkillNames(shift);
+    if (shiftRequiredSkills.length === 0) return true;
+    return shiftRequiredSkills.every(skill => employeeSkills.includes(skill));
+  };
+
+  // Create schedules with employee and shift IDs, matching by skills
+  testData.schedules.forEach((schedule) => {
+    // Find matching employee-shift pair
+    let matched = false;
+    for (const employee of createdData.employees) {
+      for (const shift of createdData.shifts) {
+        if (employeeHasRequiredSkills(employee, shift)) {
+          cy.request({
+            method: 'POST',
+            url: `${API_BASE}/schedules`,
+            body: {
+              ...schedule,
+              employeeId: employee.id,
+              shiftId: shift.id,
+              startTime: schedule.startTime || shift.startTime || shift.start_time,
+              endTime: schedule.endTime || shift.endTime || shift.end_time,
+              status: schedule.status || 'tentative', // Use tentative for seed data
+            },
+            failOnStatusCode: false,
+          });
+          matched = true;
+          break;
+        }
+      }
+      if (matched) break;
     }
   });
 });
