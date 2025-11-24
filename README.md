@@ -18,16 +18,18 @@ This document defines the ground architecture for the **Resource Scheduler** app
 ┌─────────────────────────────────────────────────────────────┐
 │                      Client Layer                            │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  React Frontend (TypeScript + Tailwind CSS)          │  │
-│  │  - Bryntum Scheduler Pro (Timeline Visualization)   │  │
+│  │  React Frontend (TypeScript + Vite + Tailwind CSS)  │  │
+│  │  - Apollo Client (GraphQL queries)                   │  │
+│  │  - React Query (REST API state management)           │  │
 │  │  - GraphQL Codegen (Type-safe queries)              │  │
+│  │  - Seed Script (Automatic test data generation)     │  │
 │  └──────────────────────────────────────────────────────┘  │
 └───────────────────────┬─────────────────────────────────────┘
                         │ GraphQL / REST
 ┌───────────────────────┴─────────────────────────────────────┐
 │                    API Gateway Layer                         │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  Hasura 2.x (GraphQL Engine)                         │  │
+│  │  Hasura 2.36.0 (GraphQL Engine)                      │  │
 │  │  - Auto-generated GraphQL API                         │  │
 │  │  - Real-time subscriptions                            │  │
 │  │  - Permission management                              │  │
@@ -38,7 +40,7 @@ This document defines the ground architecture for the **Resource Scheduler** app
 │                   Application Layer                          │
 │  ┌──────────────────────┐  ┌─────────────────────────────┐ │
 │  │  NestJS Backend      │  │  Python Optimization Service│ │
-│  │  - GraphQL Resolvers │  │  - OR-Tools Integration     │ │
+│  │  - GraphQL Resolvers │  │  - OR-Tools CP-SAT Solver  │ │
 │  │  - REST Controllers  │  │  - Constraint Solvers       │ │
 │  │  - Business Logic    │  │  - Schedule Optimization   │ │
 │  │  - Validation        │  │  - Conflict Detection      │ │
@@ -48,7 +50,7 @@ This document defines the ground architecture for the **Resource Scheduler** app
 ┌───────────────────────┴─────────────────────────────────────┐
 │                    Data Layer                                 │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  PostgreSQL Database                                 │  │
+│  │  PostgreSQL 15 (Database)                           │  │
 │  │  - Employee/Resource data                            │  │
 │  │  - Schedule assignments                              │  │
 │  │  - Constraints & rules                               │  │
@@ -57,23 +59,29 @@ This document defines the ground architecture for the **Resource Scheduler** app
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Monorepo Structure (Nx)
+## Monorepo Structure
 
 ```text
 resource-scheduler/
 ├── apps/
-│   ├── frontend/              # React application
+│   ├── frontend/              # React + Vite application
 │   │   ├── src/
 │   │   │   ├── app/
-│   │   │   │   ├── components/     # React components
+│   │   │   │   ├── components/     # Reusable UI components
 │   │   │   │   ├── features/       # Feature modules
 │   │   │   │   │   ├── scheduler/  # Scheduler feature
 │   │   │   │   │   ├── employees/  # Employee management
 │   │   │   │   │   └── constraints/ # Constraint management
 │   │   │   │   ├── hooks/          # Custom React hooks
-│   │   │   │   └── lib/            # Utilities
+│   │   │   │   └── lib/            # Utilities and API clients
 │   │   │   └── graphql/            # Generated GraphQL types
-│   │   └── cypress/                # E2E tests
+│   │   ├── scripts/
+│   │   │   └── seed-backend.js     # Database seeding script
+│   │   ├── cypress/                # E2E tests
+│   │   │   ├── e2e/                # Test specs
+│   │   │   ├── fixtures/           # Test data
+│   │   │   └── support/            # Test helpers and commands
+│   │   └── package.json
 │   │
 │   ├── backend/               # NestJS application
 │   │   ├── src/
@@ -82,21 +90,20 @@ resource-scheduler/
 │   │   │   │   ├── schedules/      # Schedule module
 │   │   │   │   ├── constraints/    # Constraint module
 │   │   │   │   └── optimization/   # Optimization module
-│   │   │   ├── common/             # Shared utilities
+│   │   │   ├── common/             # Shared utilities and types
 │   │   │   └── config/             # Configuration
 │   │   └── test/                   # Integration tests
 │   │
 │   └── optimizer/             # Python optimization service
 │       ├── src/
 │       │   ├── solvers/            # OR-Tools solvers
+│       │   │   └── optimization_engine.py # CP-SAT solver
 │       │   ├── models/             # Optimization models
-│       │   └── api/                # REST API endpoints
+│       │   │   ├── employee_model.py
+│       │   │   ├── schedule_model.py
+│       │   │   └── constraint_model.py
+│       │   └── api/                # FastAPI REST endpoints
 │       └── requirements.txt
-│
-├── libs/
-│   ├── shared/               # Shared TypeScript utilities
-│   ├── graphql/              # GraphQL schema & codegen config
-│   └── types/                # Shared TypeScript types
 │
 ├── infrastructure/
 │   ├── docker/
@@ -104,39 +111,40 @@ resource-scheduler/
 │   │   ├── Dockerfile.backend
 │   │   └── Dockerfile.optimizer
 │   ├── docker-compose.yml    # Local development
-│   ├── docker-compose.prod.yml # Production template
-│   └── terraform/             # Deployment automation
+│   └── init-db/              # Database initialization scripts
 │
 ├── hasura/
 │   ├── migrations/            # Database migrations
-│   ├── metadata/              # Hasura metadata
-│   └── config.yaml            # Hasura configuration
+│   └── metadata/              # Hasura metadata
 │
-├── nx.json                    # Nx workspace configuration
-├── package.json
 └── README.md
 ```
 
 ## Component Architecture
 
-### 1. Frontend Layer (React + TypeScript)
+### 1. Frontend Layer (React + TypeScript + Vite)
 
 **Technology Stack:**
 
-- **React**: Component-based UI framework
-- **TypeScript**: Type-safe development
-- **Tailwind CSS**: Utility-first styling (responsive by default)
-- **Bryntum Scheduler Pro**: Advanced scheduling timeline component
-- **GraphQL Codegen**: Type-safe GraphQL queries and mutations
-- **React Query / Apollo Client**: Data fetching and caching
+- **React 18**: Component-based UI framework
+- **TypeScript 5.5**: Type-safe development
+- **Vite 5.4**: Fast build tool and dev server
+- **Tailwind CSS 3.4**: Utility-first styling (responsive by default)
+- **Apollo Client 3.8**: GraphQL client for queries and mutations
+- **React Query 5.12**: REST API state management and caching
+- **React Router 6.20**: Client-side routing
+- **GraphQL Codegen 5.0**: Type-safe GraphQL queries and mutations
+- **Cypress 13.6**: End-to-end testing
+- **Vitest 1.0**: Unit testing framework
+- **ESLint 9.0**: Code linting (with legacy peer deps support)
 
 **Key Components:**
 
 ```text
 Frontend Structure:
 ├── SchedulerView
-│   ├── Timeline (Bryntum Scheduler Pro)
-│   ├── ResourceList
+│   ├── Timeline (Week/Month view)
+│   ├── ResourceList (Employee list)
 │   ├── ScheduleGrid
 │   └── ConflictIndicator
 │
@@ -158,17 +166,25 @@ Frontend Structure:
 
 **Responsibilities:**
 
-- Render interactive scheduling timeline with drag-and-drop
+- Render interactive scheduling timeline
 - Display real-time conflict detection and validation feedback
 - Handle user interactions (assignments, edits, constraints)
 - Visualize optimization results and coverage gaps
 - Responsive design for various screen sizes
+- Automatic test data seeding on container startup
+
+**API Communication:**
+
+- **REST API**: Uses Axios with relative URLs (via Vite proxy)
+- **GraphQL**: Uses Apollo Client with relative URLs (via Vite proxy)
+- **Proxy Configuration**: Vite dev server proxies all API calls to backend
+- **Environment Variables**: `VITE_BACKEND_URL`, `VITE_HASURA_URL`, `VITE_HASURA_ADMIN_SECRET`
 
 ### 2. API Gateway Layer (Hasura)
 
 **Technology Stack:**
 
-- **Hasura 2.x**: GraphQL engine on PostgreSQL
+- **Hasura 2.36.0**: GraphQL engine on PostgreSQL
 - **GraphQL**: Unified API interface
 - **Real-time subscriptions**: Live schedule updates
 
@@ -186,18 +202,24 @@ Frontend Structure:
 type Employee {
   id: ID!
   name: String!
-  skills: [Skill!]!
-  availability: [AvailabilityWindow!]!
+  email: String!
+  skills: JSON
+  availabilityPattern: JSON
   schedules: [Schedule!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type Schedule {
   id: ID!
-  employee: Employee!
-  shift: Shift!
+  employeeId: ID!
+  shiftId: ID!
   startTime: DateTime!
   endTime: DateTime!
   status: ScheduleStatus!
+  metadata: JSON
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type Constraint {
@@ -205,6 +227,19 @@ type Constraint {
   type: ConstraintType!
   rules: JSON!
   priority: Int!
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum ConstraintType {
+  max_hours
+  min_rest
+  fair_distribution
+  skill_requirement
+  availability
+  max_consecutive_days
+  min_consecutive_days
 }
 ```
 
@@ -215,9 +250,10 @@ type Constraint {
 **Technology Stack:**
 
 - **NestJS**: TypeScript backend framework
+- **Node.js 20**: Runtime environment
 - **GraphQL**: Resolvers for custom business logic
 - **REST APIs**: Integration with optimization service
-- **TypeORM / Prisma**: Database ORM (optional, Hasura handles most)
+- **Hasura Client**: Direct database access via Hasura GraphQL
 
 **Module Structure:**
 
@@ -245,6 +281,31 @@ Backend Modules:
     └── OptimizationResolver
 ```
 
+**API Endpoints:**
+
+- **REST Endpoints**:
+  - `POST /employees` - Create employee (201 Created)
+  - `GET /employees` - List all employees (200 OK)
+  - `GET /employees/:id` - Get employee by ID (200 OK)
+  - `PATCH /employees/:id` - Update employee (200 OK)
+  - `DELETE /employees/:id` - Delete employee (204 No Content)
+  
+  - `POST /constraints` - Create constraint (201 Created)
+  - `GET /constraints` - List all constraints (200 OK)
+  - `GET /constraints/active` - Get active constraints (200 OK)
+  - `GET /constraints/:id` - Get constraint by ID (200 OK)
+  - `PATCH /constraints/:id` - Update constraint (200 OK)
+  - `DELETE /constraints/:id` - Delete constraint (204 No Content)
+  
+  - `POST /schedules` - Create schedule (201 Created)
+  - `GET /schedules` - List all schedules (200 OK)
+  - `GET /schedules/:id` - Get schedule by ID (200 OK)
+  - `PATCH /schedules/:id` - Update schedule (200 OK)
+  - `DELETE /schedules/:id` - Delete schedule (204 No Content)
+  
+  - `POST /optimization` - Start optimization (201 Created)
+  - `GET /optimization/:id` - Get optimization status (200 OK)
+
 **Responsibilities:**
 
 - Business logic and validation
@@ -259,8 +320,8 @@ Backend Modules:
 **Technology Stack:**
 
 - **Python**: Optimization algorithms
-- **OR-Tools**: Google's optimization library
-- **FastAPI / Flask**: REST API (pragmatic choice)
+- **OR-Tools CP-SAT**: Google's constraint programming solver
+- **FastAPI**: REST API framework
 - **Pydantic**: Data validation
 
 **Service Structure:**
@@ -268,9 +329,7 @@ Backend Modules:
 ```text
 Optimizer Service:
 ├── solvers/
-│   ├── schedule_solver.py      # Main scheduling solver
-│   ├── constraint_solver.py   # Constraint satisfaction
-│   └── optimization_engine.py # OR-Tools integration
+│   └── optimization_engine.py # CP-SAT solver with integer constraints
 │
 ├── models/
 │   ├── employee_model.py
@@ -281,20 +340,26 @@ Optimizer Service:
     └── routes.py               # REST endpoints
 ```
 
+**API Endpoints:**
+
+- `POST /optimize` - Start optimization job
+- `GET /optimize/:id` - Get optimization status
+- `GET /health` - Health check
+
 **Responsibilities:**
 
-- Solve complex scheduling optimization problems
+- Solve complex scheduling optimization problems using CP-SAT
 - Apply constraint satisfaction algorithms
 - Balance workload distribution
 - Generate optimal schedule assignments
 - Handle skill matching and availability
-- Return multiple solution candidates
+- Return multiple solution candidates with metrics
 
 **Optimization Algorithms:**
 
-- **Constraint Programming (CP)**: For hard constraints (legal requirements, union rules)
-- **Linear Programming (LP)**: For optimization objectives (cost, fairness)
-- **Metaheuristics**: For large-scale problems
+- **Constraint Programming (CP-SAT)**: For hard constraints (legal requirements, union rules)
+- **Integer Linear Programming**: All time-based calculations use minutes (integers) for CP-SAT compatibility
+- **Multi-objective optimization**: Cost minimization, fairness maximization, workload balancing
 
 ### 4. Data Layer (PostgreSQL)
 
@@ -305,10 +370,12 @@ Optimizer Service:
 employees
 ├── id (UUID, PK)
 ├── name (VARCHAR)
-├── email (VARCHAR)
-├── skills (JSONB)              -- Array of certifications/specializations
-├── availability_pattern (JSONB) -- Recurring availability
-└── metadata (JSONB)            -- Flexible additional data
+├── email (VARCHAR, UNIQUE)
+├── skills (JSONB)              -- Array of Skill objects
+├── availability_pattern (JSONB) -- Recurring availability windows
+├── metadata (JSONB)            -- Flexible additional data
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
 
 schedules
 ├── id (UUID, PK)
@@ -317,28 +384,99 @@ schedules
 ├── start_time (TIMESTAMP)
 ├── end_time (TIMESTAMP)
 ├── status (ENUM)               -- confirmed, tentative, conflict
-└── metadata (JSONB)
+├── metadata (JSONB)
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
 
 shifts
 ├── id (UUID, PK)
 ├── department_id (UUID, FK)
-├── required_skills (JSONB)     -- Required certifications
+├── required_skills (JSONB)     -- Array of required skills
 ├── min_staffing (INT)
 ├── max_staffing (INT)
-└── time_window (TSTZRANGE)
+├── start_time (TIMESTAMP)
+├── end_time (TIMESTAMP)
+├── metadata (JSONB)
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
 
 constraints
 ├── id (UUID, PK)
-├── type (VARCHAR)              -- max_hours, min_rest, fair_distribution
+├── type (VARCHAR)              -- ConstraintType enum
 ├── rules (JSONB)               -- Flexible constraint definition
-├── priority (INT)
-└── active (BOOLEAN)
+├── priority (INT)               -- 0-100
+├── active (BOOLEAN)
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
 
 departments
 ├── id (UUID, PK)
-├── name (VARCHAR)
-└── requirements (JSONB)
+├── name (VARCHAR, UNIQUE)
+├── requirements (JSONB)
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
 ```
+
+**Constraint Types and Rules:**
+
+1. **max_hours** (`ConstraintType.MAX_HOURS`):
+   ```json
+   {
+     "maxHoursPerWeek": 40,
+     "maxHoursPerDay": 12,
+     "periodInDays": 7
+   }
+   ```
+
+2. **min_rest** (`ConstraintType.MIN_REST`):
+   ```json
+   {
+     "minRestHours": 11,
+     "applyToConsecutiveShifts": true
+   }
+   ```
+
+3. **fair_distribution** (`ConstraintType.FAIR_DISTRIBUTION`):
+   ```json
+   {
+     "maxShiftsPerEmployee": 20,
+     "distributionMethod": "equal"
+   }
+   ```
+
+4. **skill_requirement** (`ConstraintType.SKILL_REQUIREMENT`):
+   ```json
+   {
+     "requiredSkills": ["ACLS", "BLS", "Emergency Medicine"]
+   }
+   ```
+
+5. **availability** (`ConstraintType.AVAILABILITY`):
+   ```json
+   {
+     "availabilityWindows": [
+       {
+         "dayOfWeek": 1,
+         "startTime": "08:00",
+         "endTime": "17:00"
+       }
+     ]
+   }
+   ```
+
+6. **max_consecutive_days** (`ConstraintType.MAX_CONSECUTIVE_DAYS`):
+   ```json
+   {
+     "maxDays": 5
+   }
+   ```
+
+7. **min_consecutive_days** (`ConstraintType.MIN_CONSECUTIVE_DAYS`):
+   ```json
+   {
+     "minDays": 3
+   }
+   ```
 
 **Design Principles:**
 
@@ -355,13 +493,13 @@ departments
 ```text
 1. User Action (Frontend)
    ↓
-2. GraphQL Mutation → Hasura
+2. REST API POST /schedules → NestJS Backend
    ↓
-3. Hasura → PostgreSQL (Insert/Update)
+3. Backend → Conflict Detection Service
    ↓
-4. Real-time Subscription → Frontend (Update UI)
+4. Backend → Hasura → PostgreSQL (Insert)
    ↓
-5. Background: Conflict Detection (NestJS)
+5. Real-time Subscription → Frontend (Update UI)
    ↓
 6. If conflicts detected → Frontend Alert
 ```
@@ -371,23 +509,23 @@ departments
 ```text
 1. User Triggers Optimization (Frontend)
    ↓
-2. GraphQL Mutation → NestJS Backend
+2. REST API POST /optimization → NestJS Backend
    ↓
 3. NestJS → Collects current state (employees, shifts, constraints)
    ↓
 4. NestJS → REST API Call → Python Optimization Service
    ↓
-5. Python Service → OR-Tools Solver
+5. Python Service → OR-Tools CP-SAT Solver
    ↓
-6. Python Service → Returns solution candidates
+6. Python Service → Returns solution candidates with metrics
    ↓
 7. NestJS → Validates solutions
    ↓
-8. NestJS → GraphQL Response → Frontend
+8. NestJS → REST Response → Frontend
    ↓
-9. Frontend → Displays solution preview
+9. Frontend → Displays solution preview with metrics
    ↓
-10. User Accepts → Apply to database via Hasura
+10. User Accepts → Apply to database via REST API
 ```
 
 ## Deployment Architecture
@@ -397,67 +535,146 @@ departments
 ```yaml
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
+    container_name: resource-scheduler-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: scheduler
+      POSTGRES_PASSWORD: scheduler
+      POSTGRES_DB: scheduler
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: scheduler
-      POSTGRES_USER: scheduler
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   hasura:
-    image: hasura/graphql-engine:v2.x
-    depends_on:
-      - postgres
-    environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://...
-      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+    image: hasura/graphql-engine:v2.36.0
+    container_name: resource-scheduler-hasura
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://scheduler:scheduler@postgres:5432/scheduler
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_ADMIN_SECRET: myadminsecretkey
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s -m 3 http://localhost:8080/v1/version || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
   backend:
     build:
-      context: .
+      context: ..
       dockerfile: infrastructure/docker/Dockerfile.backend
-    depends_on:
-      - postgres
-      - hasura
-    environment:
-      DATABASE_URL: postgres://...
-      HASURA_URL: http://hasura:8080
+    container_name: resource-scheduler-backend
     ports:
       - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hasura:
+        condition: service_healthy
+      optimizer:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HASURA_URL: http://hasura:8080
+      HASURA_ADMIN_SECRET: myadminsecretkey
+      OPTIMIZER_SERVICE_URL: http://optimizer:8000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: scheduler
+      DB_PASSWORD: scheduler
+      DB_NAME: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health/live', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   optimizer:
     build:
-      context: .
+      context: ..
       dockerfile: infrastructure/docker/Dockerfile.optimizer
-    depends_on:
-      - backend
+    container_name: resource-scheduler-optimizer
     ports:
       - "8000:8000"
+    environment:
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
-      context: .
+      context: ..
       dockerfile: infrastructure/docker/Dockerfile.frontend
-    depends_on:
-      - backend
-      - hasura
+    container_name: resource-scheduler-frontend
     ports:
-      - "80:80"
-    # Or serve via nginx in production
+      - "3001:3001"
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      hasura:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      VITE_BACKEND_URL: http://backend:3000
+      VITE_HASURA_URL: http://hasura:8080
+      VITE_HASURA_ADMIN_SECRET: myadminsecretkey
+      SEED_BACKEND_STANDALONE: "true"
+    volumes:
+      # Hot reload in development
+      - ../apps/frontend/src:/app/src:ro
+      - ../apps/frontend/public:/app/public:ro
+      - ../apps/frontend/index.html:/app/index.html:ro
+      - ../apps/frontend/vite.config.ts:/app/vite.config.ts:ro
+      # Seed script and test data
+      - ../apps/frontend/scripts:/app/scripts:ro
+      - ../apps/frontend/cypress/fixtures:/app/cypress/fixtures:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
   postgres_data:
+    driver: local
+
+networks:
+  scheduler-network:
+    driver: bridge
 ```
 
-### Terraform Deployment
+**Frontend Container Startup Process:**
 
-- **Customer-specific configurations**: Environment variables, database credentials
-- **Infrastructure provisioning**: VMs, networking (if needed)
-- **Standardized images**: Same Docker images for all customers
-- **Configuration management**: Customer-specific settings via Terraform variables
+1. Wait for backend to be ready (up to 120 seconds)
+2. Start seed script in background (non-blocking)
+3. Start Vite dev server as main process
+4. Seed script logs available at `/tmp/seed.log`
+
+**Docker Build Notes:**
+
+- Frontend Dockerfile uses `--legacy-peer-deps` for npm ci to resolve ESLint 9 peer dependency conflicts
+- All services use health checks for proper startup ordering
+- Frontend runs in development mode with hot reload via volume mounts
 
 ## Testing Strategy
 
@@ -470,23 +687,18 @@ Testing:
 ├── E2E Tests (Cypress)
 │   ├── scheduler-workflows.spec.ts
 │   ├── optimization-flow.spec.ts
-│   └── constraint-validation.spec.ts
+│   ├── constraint-validation.spec.ts
+│   ├── employee-management.spec.ts
+│   ├── platform-scenarios.spec.ts
+│   └── navigation.spec.ts
 │
-├── Integration Tests (NestJS)
-│   ├── schedule.service.spec.ts
-│   ├── constraint.service.spec.ts
-│   └── optimization.integration.spec.ts
+├── Unit Tests (Vitest)
+│   └── Component and utility tests
 │
-├── API Tests
-│   ├── graphql-queries.test.ts
-│   ├── rest-endpoints.test.ts
-│   └── hasura-permissions.test.ts
-│
-└── Reliability & Availability Tests
-    ├── load-tests/
-    ├── stress-tests/
-    ├── chaos-tests/
-    └── health-check-tests/
+└── Integration Tests (NestJS)
+    ├── schedule.service.spec.ts
+    ├── constraint.service.spec.ts
+    └── optimization.integration.spec.ts
 ```
 
 ### Testing Focus
@@ -499,196 +711,41 @@ Testing:
 - Service availability and recovery
 - Data consistency and integrity
 
-### Testing Setup for Reliability
-
-#### 1. End-to-End Testing Setup
-
-**Tools:**
-
-- **Cypress**: Browser-based E2E testing
-- **Test Data Management**: Seed scripts for consistent test environments
-- **Test Isolation**: Independent test suites that don't interfere with each other
-
-**Test Environment Configuration:**
-
-- Separate test database instance
-- Docker Compose test environment
-- Automated test data cleanup between runs
-- Mock external dependencies (if any)
-
-**Coverage Areas:**
-
-- Complete user workflows (schedule creation, optimization, conflict resolution)
-- Cross-browser compatibility
-- Responsive design validation
-- Real-time subscription functionality
-- Error handling and recovery flows
-
-#### 2. Integration Testing Setup
-
-**Tools:**
-
-- **Jest / Vitest**: Test runner for backend services
-- **Supertest**: HTTP assertion library for API testing
-- **Test Containers**: Isolated database instances for testing
-
-**Test Environment Configuration:**
-
-- In-memory or test database instances
-- Service mocking for external dependencies
-- Automated service startup and teardown
-- Test fixtures for consistent data
-
-**Coverage Areas:**
-
-- GraphQL resolver functionality
-- REST API endpoints
-- Database operations and transactions
-- Service-to-service communication
-- Constraint validation logic
-- Optimization service integration
-
-#### 3. Reliability Testing Setup
-
-**Load Testing:**
-
-- **Tool**: k6, Artillery, or JMeter
-- **Scenarios**: Concurrent schedule operations, optimization requests, real-time subscriptions
-- **Metrics**: Response times, throughput, error rates, resource utilization
-- **Targets**: Define performance SLAs (e.g., 95th percentile response time < 500ms)
-
-**Stress Testing:**
-
-- **Purpose**: Identify system breaking points
-- **Scenarios**: Maximum concurrent users, large dataset operations, optimization with complex constraints
-- **Metrics**: System behavior under extreme load, recovery time
-
-**Chaos Testing:**
-
-- **Tool**: Chaos Monkey or custom scripts
-- **Scenarios**: Service failures, database connection loss, network partitions
-- **Purpose**: Verify system resilience and graceful degradation
-- **Recovery Validation**: Ensure automatic recovery and data consistency
-
-#### 4. Availability Testing Setup
-
-**Health Check Endpoints:**
-
-- **Backend**: `/health` endpoint with service status
-- **Database**: Connection health checks
-- **Optimization Service**: `/health` endpoint with solver availability
-- **Hasura**: GraphQL health query
-
-**Monitoring Integration:**
-
-- Health check endpoints integrated with monitoring tools
-- Automated alerting on service unavailability
-- Uptime tracking and reporting
-
-**Failover Testing:**
-
-- Database failover scenarios
-- Service restart procedures
-- Data consistency after failures
-- Graceful degradation when services are unavailable
-
-#### 5. Data Integrity Testing Setup
-
-**Database Testing:**
-
-- Transaction rollback scenarios
-- Constraint violation handling
-- Data consistency across services
-- Migration testing (forward and backward)
-
-**Optimization Testing:**
-
-- Solution correctness validation
-- Constraint satisfaction verification
-- Performance benchmarking for optimization algorithms
-- Solution quality metrics
-
-#### 6. Test Infrastructure
-
-**Docker Compose Test Environment:**
-
-```yaml
-# docker-compose.test.yml
-services:
-  postgres-test:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: scheduler_test
-    # Test-specific configuration
-  
-  test-runner:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    depends_on:
-      - postgres-test
-      - backend
-    # Test execution service
-```
-
-**CI/CD Integration:**
-
-- Automated test execution on commits
-- Test result reporting and tracking
-- Performance regression detection
-- Test coverage reporting
+### Cypress E2E Testing
 
 **Test Data Management:**
 
-- Seed scripts for consistent test data
-- Test fixtures for common scenarios
-- Data anonymization for sensitive information
-- Test data cleanup strategies
+- **Seed Script**: `apps/frontend/scripts/seed-backend.js` - Comprehensive test data generation
+- **Test Fixtures**: `apps/frontend/cypress/fixtures/test-data.json` - Validated test data
+- **Custom Commands**: `apps/frontend/cypress/support/commands.ts` - Reusable test utilities
 
-### Testing Execution Strategy
+**Cypress Commands:**
 
-**Local Development:**
+- `cy.createEmployee(employee)` - Create employee via API (validates 201 response)
+- `cy.createConstraint(constraint)` - Create constraint via API (validates 201 response)
+- `cy.updateConstraint(id, updates)` - Update constraint via API (validates 200 response)
+- `cy.deleteConstraint(id)` - Delete constraint via API (validates 204 response)
+- `cy.createSchedule(schedule)` - Create schedule via API (validates 201 response)
+- `cy.clearTestData()` - Clean up all test data (handles 204 responses)
+- `cy.seedTestData()` - Seed basic test data
+- `cy.seedPlatformData()` - Seed comprehensive platform data
 
-- Quick unit and integration tests during development
-- E2E tests before committing major changes
-- Manual smoke tests for critical paths
+**Test Coverage:**
 
-**Pre-Deployment:**
-
-- Full test suite execution
-- Load testing for performance validation
-- Security and reliability checks
-
-**Post-Deployment:**
-
-- Smoke tests in production-like environment
-- Health check monitoring
-- Performance monitoring and alerting
-
-### Test Metrics and Reporting
-
-**Key Metrics:**
-
-- Test coverage percentage
-- Test execution time
-- Flaky test identification
-- Performance benchmarks
-- Error rate tracking
-
-**Reporting:**
-
-- Test results dashboard
-- Performance trend analysis
-- Reliability metrics (MTBF, MTTR)
-- Availability percentage tracking
+- Constraint CRUD operations with proper API response validation
+- Employee management workflows
+- Schedule creation and conflict detection
+- Optimization flow with solution application
+- Form validation and error handling
+- Responsive design validation
 
 ## Performance Considerations
 
 ### Frontend Performance
 
-- **Virtualization**: Bryntum Scheduler handles large datasets efficiently
+- **Vite**: Fast HMR and optimized production builds
 - **GraphQL Codegen**: Type-safe, optimized queries
-- **Query caching**: React Query / Apollo Client
+- **Query caching**: React Query and Apollo Client caching
 - **Lazy loading**: Code splitting for feature modules
 - **Responsive rendering**: Optimize for quick decision-making
 
@@ -696,8 +753,15 @@ services:
 
 - **Database indexing**: Optimize for time-range queries and employee lookups
 - **Query optimization**: Efficient GraphQL resolvers
-- **Caching**: Redis (optional) for frequently accessed constraint rules
+- **Caching**: Consider Redis for frequently accessed constraint rules
 - **Background processing**: Async optimization jobs for large schedules
+
+### Optimization Service Performance
+
+- **CP-SAT Solver**: Efficient constraint programming for scheduling problems
+- **Integer constraints**: All time calculations use minutes (integers) for solver compatibility
+- **Solution caching**: Cache optimization results for similar inputs
+- **Timeout handling**: Configurable timeouts for large problems
 
 ### Data Scalability
 
@@ -712,59 +776,96 @@ services:
 
 - **Data isolation**: Each customer has separate database instance
 - **Network security**: Intranet-only access
-- **Authentication**: JWT tokens, role-based access control
+- **Authentication**: JWT tokens, role-based access control (via Hasura)
 - **Data encryption**: At rest and in transit
 - **Audit logging**: Track all schedule changes and optimizations
+
+### Environment Variables
+
+- **Backend**: `HASURA_ADMIN_SECRET`, `DB_PASSWORD`, `OPTIMIZER_SERVICE_URL`
+- **Frontend**: `VITE_HASURA_ADMIN_SECRET`, `VITE_BACKEND_URL`, `VITE_HASURA_URL`
+- **Hasura**: `HASURA_GRAPHQL_ADMIN_SECRET`, `HASURA_GRAPHQL_DATABASE_URL`
 
 ## Development Workflow
 
 ### Local Development
 
 1. **Docker Compose up**: All services run locally
-2. **Nx commands**: `nx serve frontend`, `nx serve backend`
-3. **Hot reload**: Development servers with watch mode
-4. **Database migrations**: Hasura CLI for schema changes
-5. **Type generation**: GraphQL Codegen watches for schema changes
+   ```bash
+   cd infrastructure
+   docker-compose up --build
+   ```
+
+2. **Frontend Development**:
+   - Frontend runs on port 3001
+   - Vite dev server with hot reload
+   - Seed script runs automatically on container startup
+   - Access at `http://localhost:3001`
+
+3. **Backend Development**:
+   - Backend runs on port 3000
+   - NestJS with hot reload (if configured)
+   - Access at `http://localhost:3000`
+
+4. **Database Migrations**: Hasura CLI for schema changes
+
+5. **Type Generation**: GraphQL Codegen watches for schema changes
 
 ### Code Generation
 
 - **GraphQL Codegen**: Auto-generate TypeScript types from GraphQL schema
 - **Hasura migrations**: Version-controlled database schema
-- **Nx generators**: Scaffold new modules and components
+- **Seed Script**: Generate test data for development and testing
+
+### Running Tests
+
+```bash
+# Frontend E2E tests
+cd apps/frontend
+npm run test:e2e
+
+# Frontend unit tests
+npm run test
+
+# Backend tests
+cd apps/backend
+npm run test
+```
 
 ## Monitoring & Observability
 
-- **Grafana**: Monitoring dashboards
+- **Health Checks**: All services expose `/health` endpoints
 - **Logging**: Structured logging across services
 - **Error tracking**: Centralized error monitoring
 - **Performance metrics**: Query performance, optimization solve times
-
-## Future Considerations
-
-### Potential Enhancements
-
-- **Hasura 3.x**: When stable and production-ready
-- **React Testing Library**: For component testing
-- **CI/CD Pipeline**: Automated testing and deployment
-- **Development Containers**: Enhanced local setup
-- **Advanced Monitoring**: Enhanced observability tools
-
-### Explicitly Avoided
-
-- **Kubernetes**: Docker Compose is sufficient for deployment needs
-- **Microservices**: Monolithic NestJS app is simpler and more maintainable
-- **Cloud-native patterns**: On-premise deployment doesn't require them
-- **MongoDB**: PostgreSQL handles all data needs effectively
 
 ## Key Architectural Decisions
 
 1. **Hasura for GraphQL**: Reduces boilerplate, auto-generates API
 2. **Separate Python service**: OR-Tools is Python-native, keeps optimization isolated
-3. **Nx monorepo**: Single repository, shared code, consistent tooling
+3. **Vite for Frontend**: Fast development experience and optimized builds
 4. **Docker Compose**: Simple deployment, no Kubernetes complexity
 5. **JSONB for constraints**: Flexible schema for varying constraint types
-6. **Bryntum Scheduler Pro**: Proven component for complex scheduling UI
-7. **REST for optimization**: Simple integration between NestJS and Python service
+6. **REST for optimization**: Simple integration between NestJS and Python service
+7. **CP-SAT Solver**: Integer-based constraint programming for scheduling problems
+8. **Seed Script Integration**: Automatic test data generation on frontend startup
+9. **Cypress E2E Testing**: Comprehensive end-to-end test coverage with API validation
+
+## API Response Specifications
+
+### Success Responses
+
+- **POST**: Returns `201 Created` with full entity object
+- **GET**: Returns `200 OK` with data (array or object)
+- **PATCH**: Returns `200 OK` with updated entity object
+- **DELETE**: Returns `204 No Content` (no response body)
+
+### Error Responses
+
+- **400 Bad Request**: Validation errors or invalid input
+- **404 Not Found**: Resource not found
+- **409 Conflict**: Resource conflict (e.g., duplicate constraint type)
+- **500 Internal Server Error**: Server errors
 
 ## Conclusion
 

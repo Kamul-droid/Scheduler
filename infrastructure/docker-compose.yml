@@ -112,6 +112,47 @@ services:
     networks:
       - scheduler-network
 
+  frontend:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+    container_name: resource-scheduler-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3001}:3001"
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      hasura:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      # For Vite proxy (runs in Node.js dev server, can use service names)
+      VITE_BACKEND_URL: http://backend:3000
+      VITE_HASURA_URL: http://hasura:8080
+      VITE_HASURA_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-myadminsecretkey}
+      # Seed script environment (VITE_API_URL is set in startup script for seed process only)
+      SEED_BACKEND_STANDALONE: "true"
+    volumes:
+      # Mount source code for hot reload in development
+      - ../apps/frontend/src:/app/src:ro
+      - ../apps/frontend/public:/app/public:ro
+      - ../apps/frontend/index.html:/app/index.html:ro
+      - ../apps/frontend/vite.config.ts:/app/vite.config.ts:ro
+      # Mount seed script and test data for updates
+      - ../apps/frontend/scripts:/app/scripts:ro
+      - ../apps/frontend/cypress/fixtures:/app/cypress/fixtures:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - scheduler-network
+
 volumes:
   postgres_data:
     driver: local

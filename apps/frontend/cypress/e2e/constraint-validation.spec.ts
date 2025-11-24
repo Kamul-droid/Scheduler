@@ -249,5 +249,139 @@ describe('Constraint Validation', () => {
       expect(stillOpen || hasErrors).to.be.true;
     });
   });
+
+  it('should create constraint via API with correct data structure', () => {
+    // Create constraint using API command
+    cy.createConstraint({
+      type: 'max_hours',
+      rules: { maxHoursPerWeek: 40, maxHoursPerDay: 12 },
+      priority: 60,
+      active: true,
+    });
+  });
+
+  it('should update constraint via API', () => {
+    const API_BASE = Cypress.env('apiUrl') || 'http://localhost:3000';
+    // First create a constraint
+    cy.createConstraint({
+      type: 'min_rest',
+      rules: { minRestHours: 11 },
+      priority: 50,
+      active: true,
+    }).then(() => {
+      // Get the created constraint ID
+      cy.request('GET', `${API_BASE}/constraints`).then((response) => {
+        const constraints = response.body;
+        const createdConstraint = constraints.find((c: any) => c.type === 'min_rest' && c.priority === 50);
+        if (createdConstraint) {
+          // Update the constraint
+          cy.updateConstraint(createdConstraint.id, { priority: 80, active: false });
+        }
+      });
+    });
+  });
+
+  it('should delete constraint via API', () => {
+    const API_BASE = Cypress.env('apiUrl') || 'http://localhost:3000';
+    // First create a constraint
+    cy.createConstraint({
+      type: 'fair_distribution',
+      rules: { maxShiftsPerEmployee: 20 },
+      priority: 70,
+      active: true,
+    }).then(() => {
+      // Get the created constraint ID
+      cy.request('GET', `${API_BASE}/constraints`).then((response) => {
+        const constraints = response.body;
+        const createdConstraint = constraints.find((c: any) => c.type === 'fair_distribution' && c.priority === 70);
+        if (createdConstraint) {
+          // Delete the constraint
+          cy.deleteConstraint(createdConstraint.id);
+        }
+      });
+    });
+  });
+
+  it('should validate constraint types match backend enum', () => {
+    // Valid constraint types from backend: max_hours, min_rest, fair_distribution, skill_requirement, availability, max_consecutive_days, min_consecutive_days
+    const validTypes = [
+      'max_hours',
+      'min_rest',
+      'fair_distribution',
+      'skill_requirement',
+      'availability',
+      'max_consecutive_days',
+      'min_consecutive_days',
+    ];
+
+    validTypes.forEach((type) => {
+      cy.createConstraint({
+        type,
+        rules: type === 'max_hours' ? { maxHoursPerWeek: 40 } :
+               type === 'min_rest' ? { minRestHours: 11 } :
+               type === 'fair_distribution' ? { maxShiftsPerEmployee: 20 } :
+               type === 'skill_requirement' ? { requiredSkills: ['ACLS'] } :
+               type === 'availability' ? { availabilityWindows: [] } :
+               type === 'max_consecutive_days' ? { maxDays: 5 } :
+               { minDays: 3 },
+        priority: 50,
+        active: true,
+      });
+    });
+  });
+
+  it('should reject invalid constraint type', () => {
+    const API_BASE = Cypress.env('apiUrl') || 'http://localhost:3000';
+    // Try to create constraint with invalid type
+    cy.request({
+      method: 'POST',
+      url: `${API_BASE}/constraints`,
+      body: {
+        type: 'invalid_type',
+        rules: { test: 'value' },
+        priority: 50,
+        active: true,
+      },
+      failOnStatusCode: false,
+    }).then((response) => {
+      // Should return 400 Bad Request
+      expect(response.status).to.equal(400);
+    });
+  });
+
+  it('should reject constraint with priority out of range', () => {
+    const API_BASE = Cypress.env('apiUrl') || 'http://localhost:3000';
+    // Try priority > 100
+    cy.request({
+      method: 'POST',
+      url: `${API_BASE}/constraints`,
+      body: {
+        type: 'max_hours',
+        rules: { maxHoursPerWeek: 40 },
+        priority: 150,
+        active: true,
+      },
+      failOnStatusCode: false,
+    }).then((response) => {
+      // Should return 400 Bad Request
+      expect(response.status).to.equal(400);
+    });
+
+    // Try priority < 0
+    cy.request({
+      method: 'POST',
+      url: `${API_BASE}/constraints`,
+      body: {
+        type: 'max_hours',
+        rules: { maxHoursPerWeek: 40 },
+        priority: -10,
+        active: true,
+      },
+      failOnStatusCode: false,
+    }).then((response) => {
+      // Should return 400 Bad Request
+      expect(response.status).to.equal(400);
+    });
+  });
 });
 

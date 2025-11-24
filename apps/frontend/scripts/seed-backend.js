@@ -1140,6 +1140,54 @@ async function seedBackend() {
     }
     console.log(`   ✅ Processed ${createdData.schedules.length} total schedules\n`);
 
+    // Export valid schedules to test-data.json for use in tests
+    if (createdData.schedules.length > 0) {
+      try {
+        const testDataContent = fs.readFileSync(TEST_DATA_PATH, 'utf-8');
+        const testDataJson = JSON.parse(testDataContent);
+        
+        // Convert schedules to test data format (without IDs, will be matched)
+        const validatedSchedules = createdData.schedules
+          .filter(schedule => schedule.status === 'confirmed' || schedule.status === 'tentative')
+          .slice(0, 10) // Limit to first 10 validated schedules
+          .map(schedule => {
+            // Find employee and shift names for reference
+            const employee = createdData.employees.find(e => e.id === schedule.employeeId);
+            const shift = createdData.shifts.find(s => s.id === schedule.shiftId);
+            
+            return {
+              employeeId: '', // Will be matched by seed script
+              shiftId: '', // Will be matched by seed script
+              startTime: schedule.startTime || schedule.start_time,
+              endTime: schedule.endTime || schedule.end_time,
+              status: schedule.status || 'confirmed',
+              metadata: {
+                ...(schedule.metadata || {}),
+                _employeeName: employee?.name || '',
+                _shiftName: shift?.metadata?.name || shift?.name || '',
+                _notes: 'Validated schedule from database',
+              },
+            };
+          });
+        
+        // Update test-data.json with validated schedules (append to existing)
+        if (validatedSchedules.length > 0) {
+          // Keep original schedules and add validated ones
+          const existingSchedules = testDataJson.schedules || [];
+          testDataJson.schedules = [
+            ...existingSchedules.filter((s: any) => !s.metadata?._notes?.includes('Validated schedule')),
+            ...validatedSchedules,
+export { seedBackend };
+          
+          // Write back to file
+          fs.writeFileSync(TEST_DATA_PATH, JSON.stringify(testDataJson, null, 2));
+          console.log(`   💾 Exported ${validatedSchedules.length} validated schedules to ${TEST_DATA_PATH}\n`);
+        }
+      } catch (error) {
+        console.log(`   ⚠ Could not export schedules to test-data.json: ${error.message}\n`);
+      }
+    }
+
     // Summary
     console.log('✨ Seeding completed!\n');
     console.log('📊 Final Summary:');

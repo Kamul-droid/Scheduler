@@ -16,6 +16,18 @@ declare global {
       createConstraint(constraint: { type: string; rules: any; priority: number; active?: boolean }): Chainable<void>;
       
       /**
+       * Custom command to update a constraint
+       * @example cy.updateConstraint('constraint-id', { priority: 80, active: false })
+       */
+      updateConstraint(id: string, updates: { type?: string; rules?: any; priority?: number; active?: boolean }): Chainable<void>;
+      
+      /**
+       * Custom command to delete a constraint
+       * @example cy.deleteConstraint('constraint-id')
+       */
+      deleteConstraint(id: string): Chainable<void>;
+      
+      /**
        * Custom command to create a schedule
        * @example cy.createSchedule({ employeeId: '1', startTime: '2024-01-01T09:00:00Z', endTime: '2024-01-01T17:00:00Z' })
        */
@@ -63,7 +75,14 @@ Cypress.Commands.add('createEmployee', (employee) => {
     body: employee,
     failOnStatusCode: false,
   }).then((response) => {
-    expect(response.status).to.be.oneOf([200, 201]);
+    // Backend returns 201 CREATED for POST
+    expect(response.status).to.equal(201);
+    // Verify response body structure matches Employee entity
+    expect(response.body).to.have.property('id');
+    expect(response.body).to.have.property('name');
+    expect(response.body).to.have.property('email');
+    expect(response.body).to.have.property('createdAt');
+    expect(response.body).to.have.property('updatedAt');
   });
 });
 
@@ -74,7 +93,46 @@ Cypress.Commands.add('createConstraint', (constraint) => {
     body: constraint,
     failOnStatusCode: false,
   }).then((response) => {
-    expect(response.status).to.be.oneOf([200, 201]);
+    // Backend returns 201 CREATED for POST
+    expect(response.status).to.equal(201);
+    // Verify response body structure matches Constraint entity
+    expect(response.body).to.have.property('id');
+    expect(response.body).to.have.property('type');
+    expect(response.body).to.have.property('rules');
+    expect(response.body).to.have.property('priority');
+    expect(response.body).to.have.property('active');
+    expect(response.body).to.have.property('createdAt');
+    expect(response.body).to.have.property('updatedAt');
+  });
+});
+
+Cypress.Commands.add('updateConstraint', (id, updates) => {
+  cy.request({
+    method: 'PATCH',
+    url: `${API_BASE}/constraints/${id}`,
+    body: updates,
+    failOnStatusCode: false,
+  }).then((response) => {
+    // Backend returns 200 OK for PATCH
+    expect(response.status).to.equal(200);
+    // Verify response body structure matches Constraint entity
+    expect(response.body).to.have.property('id');
+    expect(response.body).to.have.property('type');
+    expect(response.body).to.have.property('rules');
+    expect(response.body).to.have.property('priority');
+    expect(response.body).to.have.property('active');
+    expect(response.body).to.have.property('updatedAt');
+  });
+});
+
+Cypress.Commands.add('deleteConstraint', (id) => {
+  cy.request({
+    method: 'DELETE',
+    url: `${API_BASE}/constraints/${id}`,
+    failOnStatusCode: false,
+  }).then((response) => {
+    // Backend returns 204 NO_CONTENT for DELETE
+    expect(response.status).to.equal(204);
   });
 });
 
@@ -85,7 +143,17 @@ Cypress.Commands.add('createSchedule', (schedule) => {
     body: schedule,
     failOnStatusCode: false,
   }).then((response) => {
-    expect(response.status).to.be.oneOf([200, 201]);
+    // Backend returns 201 CREATED for POST
+    expect(response.status).to.equal(201);
+    // Verify response body structure matches Schedule entity
+    expect(response.body).to.have.property('id');
+    expect(response.body).to.have.property('employeeId');
+    expect(response.body).to.have.property('shiftId');
+    expect(response.body).to.have.property('startTime');
+    expect(response.body).to.have.property('endTime');
+    expect(response.body).to.have.property('status');
+    expect(response.body).to.have.property('createdAt');
+    expect(response.body).to.have.property('updatedAt');
   });
 });
 
@@ -94,8 +162,14 @@ Cypress.Commands.add('clearTestData', () => {
   cy.request('GET', `${API_BASE}/schedules`).then((response) => {
     if (response.body && Array.isArray(response.body)) {
       response.body.forEach((schedule: any) => {
-        cy.request('DELETE', `${API_BASE}/schedules/${schedule.id}`).then(() => {
-          // Ignore errors if already deleted
+        cy.request({
+          method: 'DELETE',
+          url: `${API_BASE}/schedules/${schedule.id}`,
+          failOnStatusCode: false,
+        }).then((deleteResponse) => {
+          // Backend returns 204 NO_CONTENT for DELETE
+          // Accept 204, 200, or 404 (already deleted)
+          expect(deleteResponse.status).to.be.oneOf([200, 204, 404]);
         });
       });
     }
@@ -105,8 +179,14 @@ Cypress.Commands.add('clearTestData', () => {
   cy.request('GET', `${API_BASE}/constraints`).then((response) => {
     if (response.body && Array.isArray(response.body)) {
       response.body.forEach((constraint: any) => {
-        cy.request('DELETE', `${API_BASE}/constraints/${constraint.id}`).then(() => {
-          // Ignore errors if already deleted
+        cy.request({
+          method: 'DELETE',
+          url: `${API_BASE}/constraints/${constraint.id}`,
+          failOnStatusCode: false,
+        }).then((deleteResponse) => {
+          // Backend returns 204 NO_CONTENT for DELETE
+          // Accept 204, 200, or 404 (already deleted)
+          expect(deleteResponse.status).to.be.oneOf([200, 204, 404]);
         });
       });
     }
@@ -116,8 +196,14 @@ Cypress.Commands.add('clearTestData', () => {
   cy.request('GET', `${API_BASE}/employees`).then((response) => {
     if (response.body && Array.isArray(response.body)) {
       response.body.forEach((employee: any) => {
-        cy.request('DELETE', `${API_BASE}/employees/${employee.id}`).then(() => {
-          // Ignore errors if already deleted
+        cy.request({
+          method: 'DELETE',
+          url: `${API_BASE}/employees/${employee.id}`,
+          failOnStatusCode: false,
+        }).then((deleteResponse) => {
+          // Backend returns 204 NO_CONTENT for DELETE
+          // Accept 204, 200, or 404 (already deleted)
+          expect(deleteResponse.status).to.be.oneOf([200, 204, 404]);
         });
       });
     }
@@ -243,7 +329,16 @@ Cypress.Commands.add('seedPlatformData', () => {
   cy.wait(1000);
 
   // Create constraints with duplicate handling
+  // Ensure constraint types match backend enum: max_hours, min_rest, fair_distribution, skill_requirement, availability, max_consecutive_days, min_consecutive_days
   testData.constraints.forEach((constraint) => {
+    // Validate constraint structure matches CreateConstraintDto
+    const validConstraint = {
+      type: constraint.type, // Must be one of ConstraintType enum values
+      rules: constraint.rules, // Must be an object
+      priority: constraint.priority, // Must be integer 0-100
+      active: constraint.active !== undefined ? constraint.active : true, // Optional, defaults to true
+    };
+    
     cy.then(() => findEntityByType('/constraints', 'type', constraint.type)).then((existing) => {
       if (existing) {
         createdData.constraints.push(existing);
@@ -251,13 +346,26 @@ Cypress.Commands.add('seedPlatformData', () => {
         cy.request({
           method: 'POST',
           url: `${API_BASE}/constraints`,
-          body: constraint,
+          body: validConstraint,
           failOnStatusCode: false,
         }).then((response) => {
-          if (response.status === 201 || response.status === 200) {
+          // Backend returns 201 CREATED for POST
+          if (response.status === 201) {
+            // Verify response structure
+            expect(response.body).to.have.property('id');
+            expect(response.body).to.have.property('type');
+            expect(response.body).to.have.property('rules');
+            expect(response.body).to.have.property('priority');
+            expect(response.body).to.have.property('active');
             createdData.constraints.push(response.body);
-          } else if (response.status === 400 || response.status === 409) {
-            // Try to fetch existing
+          } else if (response.status === 400) {
+            // Validation error - log and try to fetch existing
+            cy.log(`Failed to create constraint ${constraint.type}: ${JSON.stringify(response.body)}`);
+            cy.then(() => findEntityByType('/constraints', 'type', constraint.type)).then((found) => {
+              if (found) createdData.constraints.push(found);
+            });
+          } else if (response.status === 409) {
+            // Conflict - entity already exists
             cy.then(() => findEntityByType('/constraints', 'type', constraint.type)).then((found) => {
               if (found) createdData.constraints.push(found);
             });
@@ -397,7 +505,7 @@ Cypress.Commands.add('createShiftForDepartment', (departmentName: string) => {
     const department = response.body.find((d: any) => d.name === departmentName);
     if (department) {
       const shiftType = deptMapping.shiftCoverage === '24/7' ? 'day' : 'day';
-      const shiftHours = userMappings.shiftTypes?.[shiftType];
+      // const shiftHours = userMappings.shiftTypes?.[shiftType]; // Not used currently
 
       const shift = {
         departmentId: department.id,
