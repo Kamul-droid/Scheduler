@@ -38,9 +38,11 @@ describe('Employee Management', () => {
     // Verify modal opens
     cy.get('h3').contains('Add Employee').should('be.visible');
     
-    // Fill in employee form
-    cy.get('input[type="text"]').first().type('New Employee');
-    cy.get('input[type="email"]').type('newemployee@example.com');
+    // Fill in employee form - wait for form to be visible
+    cy.get('form').should('be.visible');
+    // Use label-based selectors for more reliability
+    cy.contains('label', 'Name').parent().find('input').type('New Employee');
+    cy.contains('label', 'Email').parent().find('input').type('newemployee@example.com');
     
     // Add a skill
     cy.get('input[placeholder*="skill" i]').type('React');
@@ -67,7 +69,7 @@ describe('Employee Management', () => {
         cy.get('h3').contains('Edit Employee').should('be.visible');
         
         // Update name
-        cy.get('input[type="text"]').first().clear().type('Updated Employee');
+        cy.contains('label', 'Name').parent().find('input').clear().type('Updated Employee');
         
         // Save changes
         cy.get('button').contains('Update').click();
@@ -77,14 +79,16 @@ describe('Employee Management', () => {
       } else {
         // Create employee first
         cy.contains('Add Employee').click();
-        cy.get('input[type="text"]').first().type('Test Employee');
-        cy.get('input[type="email"]').type('test@example.com');
+        cy.get('form').should('be.visible');
+        cy.contains('label', 'Name').parent().find('input').type('Test Employee');
+        cy.contains('label', 'Email').parent().find('input').type('test@example.com');
         cy.get('button').contains('Create').click();
         cy.wait(1000);
         
         // Now edit it
         cy.get('button').contains('Edit').first().click();
-        cy.get('input[type="text"]').first().clear().type('Updated Employee');
+        cy.get('form').should('be.visible');
+        cy.contains('label', 'Name').parent().find('input').clear().type('Updated Employee');
         cy.get('button').contains('Update').click();
       }
     });
@@ -114,8 +118,9 @@ describe('Employee Management', () => {
     cy.wait(500);
     
     // Fill basic info
-    cy.get('input[type="text"]').first().type('Skillful Employee');
-    cy.get('input[type="email"]').type('skills@example.com');
+    cy.get('form').should('be.visible');
+    cy.contains('label', 'Name').parent().find('input').type('Skillful Employee');
+    cy.contains('label', 'Email').parent().find('input').type('skills@example.com');
     
     // Add multiple skills
     cy.get('input[placeholder*="skill" i]').type('JavaScript');
@@ -157,15 +162,17 @@ describe('Employee Management', () => {
     cy.wait(500);
     
     // Enter invalid email
-    cy.get('input[type="text"]').first().type('Test Employee');
-    cy.get('input[type="email"]').type('invalid-email');
+    cy.get('form').should('be.visible');
+    cy.contains('label', 'Name').parent().find('input').type('Test Employee');
+    cy.contains('label', 'Email').parent().find('input').type('invalid-email');
     
     // Try to submit
     cy.get('button').contains('Create').click();
     
     // Browser should show validation error
     cy.get('input[type="email"]').then(($input) => {
-      expect($input[0].validity.valid).to.be.false;
+      const input = $input[0] as HTMLInputElement;
+      expect(input.validity.valid).to.be.false;
     });
   });
 });

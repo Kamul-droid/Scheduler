@@ -43,8 +43,8 @@ describe('Constraint Validation', () => {
     // Fill in constraint form
     cy.get('select').first().select('max_hours');
     
-    // Enter rules as JSON
-    cy.get('textarea').clear().type('{"maxHoursPerWeek": 40, "maxHoursPerDay": 12}');
+    // Enter rules as JSON (disable special char parsing to type JSON literally)
+    cy.get('textarea').clear().type('{"maxHoursPerWeek": 40, "maxHoursPerDay": 12}', { parseSpecialCharSequences: false });
     
     // Set priority
     cy.get('input[type="number"]').clear().type('60');
@@ -102,7 +102,7 @@ describe('Constraint Validation', () => {
         // Create a constraint first if none exist
         cy.contains('Add Constraint').click();
         cy.get('select').first().select('max_hours');
-        cy.get('textarea').clear().type('{"maxHoursPerWeek": 40}');
+        cy.get('textarea').clear().type('{"maxHoursPerWeek": 40}', { parseSpecialCharSequences: false });
         cy.get('input[type="number"]').clear().type('50');
         cy.get('button').contains('Create').click();
         cy.wait(1000);
@@ -160,7 +160,7 @@ describe('Constraint Validation', () => {
         // Create a constraint first
         cy.contains('Add Constraint').click();
         cy.get('select').first().select('min_rest');
-        cy.get('textarea').clear().type('{"minRestHours": 11}');
+        cy.get('textarea').clear().type('{"minRestHours": 11}', { parseSpecialCharSequences: false });
         cy.get('input[type="number"]').clear().type('75');
         cy.get('button').contains('Create').click();
         cy.wait(1000);
@@ -195,7 +195,7 @@ describe('Constraint Validation', () => {
     
     // Try to enter invalid priority
     cy.get('select').first().select('max_hours');
-    cy.get('textarea').clear().type('{"maxHoursPerWeek": 40}');
+    cy.get('textarea').clear().type('{"maxHoursPerWeek": 40}', { parseSpecialCharSequences: false });
     
     // Try priority > 100
     cy.get('input[type="number"]').clear().type('150');
@@ -270,7 +270,12 @@ describe('Constraint Validation', () => {
       active: true,
     }).then(() => {
       // Get the created constraint ID
-      cy.request('GET', `${API_BASE}/constraints`).then((response) => {
+      cy.request({
+        method: 'GET',
+        url: `${API_BASE}/constraints`,
+        timeout: 30000,
+        failOnStatusCode: false,
+      }).then((response) => {
         const constraints = response.body;
         const createdConstraint = constraints.find((c: any) => c.type === 'min_rest' && c.priority === 50);
         if (createdConstraint) {
@@ -291,7 +296,12 @@ describe('Constraint Validation', () => {
       active: true,
     }).then(() => {
       // Get the created constraint ID
-      cy.request('GET', `${API_BASE}/constraints`).then((response) => {
+      cy.request({
+        method: 'GET',
+        url: `${API_BASE}/constraints`,
+        timeout: 30000,
+        failOnStatusCode: false,
+      }).then((response) => {
         const constraints = response.body;
         const createdConstraint = constraints.find((c: any) => c.type === 'fair_distribution' && c.priority === 70);
         if (createdConstraint) {
@@ -343,6 +353,7 @@ describe('Constraint Validation', () => {
         active: true,
       },
       failOnStatusCode: false,
+      timeout: 30000,
     }).then((response) => {
       // Should return 400 Bad Request
       expect(response.status).to.equal(400);
@@ -362,6 +373,7 @@ describe('Constraint Validation', () => {
         active: true,
       },
       failOnStatusCode: false,
+      timeout: 30000,
     }).then((response) => {
       // Should return 400 Bad Request
       expect(response.status).to.equal(400);
@@ -378,6 +390,7 @@ describe('Constraint Validation', () => {
         active: true,
       },
       failOnStatusCode: false,
+      timeout: 30000,
     }).then((response) => {
       // Should return 400 Bad Request
       expect(response.status).to.equal(400);

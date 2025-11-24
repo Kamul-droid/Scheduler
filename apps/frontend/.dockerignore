@@ -1,0 +1,29 @@
+# Exclude Cypress test files from Docker build
+# Cypress is for local development only
+# Keep fixtures directory (used by seed script)
+cypress/e2e/
+cypress/support/
+cypress/screenshots/
+cypress/videos/
+cypress.config.ts
+# Keep: cypress/fixtures/ (needed for seed script)
+
+# Exclude unit test files (local development only)
+src/test/
+vitest.config.ts
+
+# Exclude node_modules (will be installed in container)
+node_modules/
+
+# Exclude build artifacts (will be built in container)
+dist/
+build/
+
+# Exclude development files
+*.log
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+

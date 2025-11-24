@@ -23,7 +23,7 @@ COPY apps/frontend/package.json apps/frontend/package-lock.json* ./
 # Use --legacy-peer-deps to resolve ESLint 9 peer dependency conflicts
 RUN npm ci --legacy-peer-deps
 
-# Copy source code and configuration files
+# Copy source code and configuration files (exclude cypress via .dockerignore)
 COPY apps/frontend/ ./
 
 # Build the application
@@ -53,11 +53,33 @@ RUN npm ci --legacy-peer-deps && npm cache clean --force
 COPY --from=builder --chown=vite:nodejs /app/dist ./dist
 
 # Copy source code (needed for dev server in development mode)
-COPY --chown=vite:nodejs apps/frontend/ ./
+# Note: Cypress files are excluded via .dockerignore (local dev only)
+# Copy all necessary files explicitly to ensure they're available even without volume mounts
+COPY --chown=vite:nodejs apps/frontend/src ./src
+COPY --chown=vite:nodejs apps/frontend/scripts ./scripts
+COPY --chown=vite:nodejs apps/frontend/public ./public
+COPY --chown=vite:nodejs apps/frontend/index.html ./index.html
+COPY --chown=vite:nodejs apps/frontend/vite.config.ts ./vite.config.ts
+COPY --chown=vite:nodejs apps/frontend/package.json ./package.json
+COPY --chown=vite:nodejs apps/frontend/tsconfig.json ./tsconfig.json
+COPY --chown=vite:nodejs apps/frontend/tsconfig.node.json ./tsconfig.node.json
+COPY --chown=vite:nodejs apps/frontend/tailwind.config.js ./tailwind.config.js
+COPY --chown=vite:nodejs apps/frontend/postcss.config.js ./postcss.config.js
+# Copy cypress fixtures (needed for seed script to load test data)
+COPY --chown=vite:nodejs apps/frontend/cypress/fixtures ./cypress/fixtures
+# Copy codegen config (optional, for GraphQL code generation)
+COPY --chown=vite:nodejs apps/frontend/codegen.ts ./codegen.ts
+
+# Create cache directory for Vite and ensure write permissions
+# Vite needs to write temporary files, so ensure the vite user owns /app
+RUN mkdir -p /app/node_modules/.vite /tmp/vite && \
+    chown -R vite:nodejs /app /tmp/vite && \
+    chmod -R u+w /app /tmp/vite
 
 # Create startup script that runs seed in parallel
 RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo 'set -e' >> /app/start.sh && \
+    echo '# Do not exit on error - seed script failure should not crash the container' >> /app/start.sh && \
+    echo 'set +e' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Wait for backend to be ready' >> /app/start.sh && \
     echo 'echo "⏳ Waiting for backend to be ready..."' >> /app/start.sh && \
@@ -77,19 +99,48 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo '  echo "⚠️  Backend did not become ready in time, continuing anyway..."' >> /app/start.sh && \
     echo 'fi' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
-    echo '# Run seed script in background (non-blocking)' >> /app/start.sh && \
+    echo '# Run seed script in background (non-blocking, errors are ignored)' >> /app/start.sh && \
     echo 'echo "🌱 Starting seed script in background..."' >> /app/start.sh && \
     echo '# Seed script runs in Node.js, can use service names directly' >> /app/start.sh && \
-    echo 'SEED_BACKEND_STANDALONE=true VITE_API_URL=http://backend:3000 npm run seed > /tmp/seed.log 2>&1 &' >> /app/start.sh && \
-    echo 'SEED_PID=$!' >> /app/start.sh && \
-    echo 'echo "   Seed script started with PID $SEED_PID (logs: /tmp/seed.log)"' >> /app/start.sh && \
+    echo 'cd /app' >> /app/start.sh && \
+    echo '# Debug: List files to verify structure' >> /app/start.sh && \
+    echo 'if [ -d /app/scripts ]; then' >> /app/start.sh && \
+    echo '  echo "   Found scripts directory"' >> /app/start.sh && \
+    echo '  ls -la /app/scripts/ | head -5' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
+    echo 'if [ -f /app/scripts/seed-backend.js ]; then' >> /app/start.sh && \
+    echo '  echo "   ✅ Seed script found, starting..."' >> /app/start.sh && \
+    echo '  (SEED_BACKEND_STANDALONE=true VITE_API_URL=http://backend:3000 npm run seed > /tmp/seed.log 2>&1 || echo "⚠️  Seed script failed (check /tmp/seed.log)") &' >> /app/start.sh && \
+    echo '  SEED_PID=$!' >> /app/start.sh && \
+    echo '  echo "   Seed script started with PID $SEED_PID (logs: /tmp/seed.log)"' >> /app/start.sh && \
+    echo 'else' >> /app/start.sh && \
+    echo '  echo "⚠️  Seed script not found at /app/scripts/seed-backend.js"' >> /app/start.sh && \
+    echo '  echo "   Current directory: $(pwd)"' >> /app/start.sh && \
+    echo '  echo "   Files in /app: $(ls -la /app | head -10)"' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Start Vite dev server (this is the main process)' >> /app/start.sh && \
     echo '# Frontend app uses relative URLs (empty VITE_API_URL) to go through Vite proxy' >> /app/start.sh && \
     echo 'echo "🚀 Starting Vite dev server..."' >> /app/start.sh && \
+    echo '# Verify source files exist' >> /app/start.sh && \
+    echo 'if [ ! -f /app/src/main.tsx ]; then' >> /app/start.sh && \
+    echo '  echo "❌ Error: /app/src/main.tsx not found!"' >> /app/start.sh && \
+    echo '  echo "   Checking file structure..."' >> /app/start.sh && \
+    echo '  echo "   Files in /app: $(ls -la /app 2>/dev/null | head -15 || echo \"cannot list\")"' >> /app/start.sh && \
+    echo '  echo "   Files in /app/src: $(ls -la /app/src 2>/dev/null | head -10 || echo \"src directory not found\")"' >> /app/start.sh && \
+    echo '  echo "   Working directory: $(pwd)"' >> /app/start.sh && \
+    echo '  echo "   This might be a volume mount issue on network shares"' >> /app/start.sh && \
+    echo '  echo "   Trying to continue anyway..."' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
     echo 'unset VITE_API_URL' >> /app/start.sh && \
+    echo 'cd /app' >> /app/start.sh && \
+    echo '# Use exec to replace shell process with Vite (important for signal handling)' >> /app/start.sh && \
     echo 'exec npm run dev -- --host 0.0.0.0' >> /app/start.sh && \
-    chmod +x /app/start.sh
+    chmod +x /app/start.sh && \
+    chown vite:nodejs /app/start.sh
+
+# Ensure all files are owned by vite user before switching
+RUN chown -R vite:nodejs /app
 
 USER vite
 

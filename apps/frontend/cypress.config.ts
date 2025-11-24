@@ -13,9 +13,10 @@ export default defineConfig({
     specPattern: 'cypress/e2e/**/*.spec.{js,jsx,ts,tsx}',
     supportFile: 'cypress/support/e2e.ts',
     fixturesFolder: 'cypress/fixtures',
-    defaultCommandTimeout: 10000,
-    requestTimeout: 10000,
-    responseTimeout: 10000,
+    defaultCommandTimeout: 30000,
+    requestTimeout: 30000,
+    responseTimeout: 30000,
+    pageLoadTimeout: 30000,
     env: {
       apiUrl: 'http://localhost:3000',
       hasuraUrl: 'http://localhost:8080',

@@ -22,12 +22,12 @@ export default function SchedulerView() {
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const filteredSchedules = schedules.filter((schedule) => {
+  const filteredSchedules = schedules.filter((schedule: any) => {
     const scheduleDate = parseISO(schedule.startTime);
     return isSameDay(scheduleDate, selectedDate);
   });
 
-  const conflicts = filteredSchedules.filter((s) => s.status === 'conflict');
+  const conflicts = filteredSchedules.filter((s: any) => s.status === 'conflict');
 
   if (schedulesLoading || employeesLoading) {
     return (
@@ -118,11 +118,11 @@ export default function SchedulerView() {
         <div className="grid grid-cols-7 gap-2">
           {weekDays.map((day) => {
             const isSelected = isSameDay(day, selectedDate);
-            const daySchedules = schedules.filter((s) => {
+            const daySchedules = schedules.filter((s: any) => {
               const scheduleDate = parseISO(s.startTime);
               return isSameDay(scheduleDate, day);
             });
-            const dayConflicts = daySchedules.filter((s) => s.status === 'conflict').length;
+            const dayConflicts = daySchedules.filter((s: any) => s.status === 'conflict').length;
 
             return (
               <button

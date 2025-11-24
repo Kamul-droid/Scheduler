@@ -1,5 +1,4 @@
 import { Edit, Trash2 } from 'lucide-react';
-import Button from '../../components/Button';
 
 interface DepartmentListProps {
   departments: any[];

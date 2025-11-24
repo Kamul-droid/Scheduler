@@ -84,29 +84,65 @@ async function fetchValidSchedules() {
   }
 }
 
+async function waitForBackend(maxRetries = 30, retryDelay = 2000) {
+  console.log(`⏳ Waiting for backend to be available at ${API_BASE}...`);
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const healthResponse = await axios.get(`${API_BASE}/health`, { timeout: 5000 });
+      console.log(`✅ Backend is available (${healthResponse.status} ${healthResponse.statusText})\n`);
+      return true;
+    } catch (error) {
+      if (i < maxRetries - 1) {
+        console.log(`   Attempt ${i + 1}/${maxRetries}: Backend not ready, retrying in ${retryDelay / 1000}s...`);
+        await wait(retryDelay);
+      } else {
+        console.error('❌ Backend is not available after maximum retries.');
+        console.error(`   Expected backend at: ${API_BASE}`);
+        if (error.code === 'ECONNREFUSED') {
+          console.error('   Error: Connection refused - backend is not running\n');
+        } else if (error.code === 'ETIMEDOUT') {
+          console.error('   Error: Connection timeout - backend is not responding\n');
+        } else {
+          console.error(`   Error: ${error.message}\n`);
+        }
+        // In standalone mode, exit with error. Otherwise, just log and continue.
+        if (process.env.SEED_BACKEND_STANDALONE === 'true') {
+          process.exit(1);
+        }
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
 async function seedBackend() {
   console.log('🌱 Seeding backend with test data...\n');
 
-  // Check if backend is available
-  console.log('⏳ Checking backend availability...');
-  try {
-    const healthResponse = await axios.get(`${API_BASE}/health`, { timeout: 5000 });
-    console.log(`✅ Backend is available (${healthResponse.status} ${healthResponse.statusText})\n`);
-  } catch (error) {
-    console.error('❌ Backend is not available. Please start the backend server first.');
-    console.error(`   Expected backend at: ${API_BASE}`);
-    if (error.code === 'ECONNREFUSED') {
-      console.error('   Error: Connection refused - backend is not running\n');
-    } else if (error.code === 'ETIMEDOUT') {
-      console.error('   Error: Connection timeout - backend is not responding\n');
-    } else {
-      console.error(`   Error: ${error.message}\n`);
-    }
-    process.exit(1);
+  // Wait for backend to be available with retries
+  const backendReady = await waitForBackend(30, 2000);
+  if (!backendReady) {
+    console.error('⚠️  Skipping seed - backend is not available.\n');
+    return;
   }
 
-  // Load test data
-  console.log('⏳ Loading test data...');
+  // Load test data from fixture file
+  console.log('⏳ Loading test data from fixture file...');
+  console.log(`   Looking for fixture at: ${TEST_DATA_PATH}`);
+  
+  // Check if fixture file exists
+  if (!fs.existsSync(TEST_DATA_PATH)) {
+    console.error(`❌ Fixture file not found: ${TEST_DATA_PATH}`);
+    console.error('   Please ensure the fixture file exists in cypress/fixtures/test-data.json');
+    if (process.env.SEED_BACKEND_STANDALONE === 'true') {
+      console.error('   Exiting because SEED_BACKEND_STANDALONE=true\n');
+      process.exit(1);
+    } else {
+      console.error('   Continuing anyway (not in standalone mode)\n');
+      return;
+    }
+  }
+  
   let testData;
   try {
     const data = fs.readFileSync(TEST_DATA_PATH, 'utf-8');
@@ -117,9 +153,29 @@ async function seedBackend() {
     console.log(`   - ${testData.constraints?.length || 0} constraints`);
     console.log(`   - ${testData.shifts?.length || 0} shifts`);
     console.log(`   - ${testData.schedules?.length || 0} schedules\n`);
+    
+    // Validate that we have data to seed
+    if (!testData.departments || testData.departments.length === 0) {
+      console.warn('⚠️  Warning: No departments found in fixture data');
+    }
+    if (!testData.employees || testData.employees.length === 0) {
+      console.warn('⚠️  Warning: No employees found in fixture data');
+    }
   } catch (error) {
     console.error('❌ Failed to load test data:', error.message);
-    process.exit(1);
+    console.error(`   Path: ${TEST_DATA_PATH}`);
+    if (error.code === 'ENOENT') {
+      console.error('   Error: File not found');
+    } else if (error instanceof SyntaxError) {
+      console.error('   Error: Invalid JSON format');
+    }
+    if (process.env.SEED_BACKEND_STANDALONE === 'true') {
+      console.error('   Exiting because SEED_BACKEND_STANDALONE=true\n');
+      process.exit(1);
+    } else {
+      console.error('   Continuing anyway (not in standalone mode)\n');
+      return;
+    }
   }
 
   const createdData = {
@@ -1175,9 +1231,9 @@ async function seedBackend() {
           // Keep original schedules and add validated ones
           const existingSchedules = testDataJson.schedules || [];
           testDataJson.schedules = [
-            ...existingSchedules.filter((s: any) => !s.metadata?._notes?.includes('Validated schedule')),
+            ...existingSchedules.filter((s) => !s.metadata?._notes?.includes('Validated schedule')),
             ...validatedSchedules,
-export { seedBackend };
+          ];
           
           // Write back to file
           fs.writeFileSync(TEST_DATA_PATH, JSON.stringify(testDataJson, null, 2));
@@ -1204,24 +1260,37 @@ export { seedBackend };
   } catch (error) {
     // Log error but don't crash - allow dev server to continue
     console.error('❌ Error during seeding:', error.message);
-    if (error.stack && process.env.NODE_ENV === 'development') {
+    if (error.response) {
+      console.error(`   HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+    }
+    if (error.stack && (process.env.NODE_ENV === 'development' || process.env.SEED_BACKEND_STANDALONE === 'true')) {
       console.error('   Stack:', error.stack);
     }
     // Don't exit with error code when run from Vite plugin
     // This allows the dev server to continue even if seeding fails
     if (process.env.SEED_BACKEND_STANDALONE === 'true') {
+      console.error('   Exiting because SEED_BACKEND_STANDALONE=true\n');
       process.exit(1);
+    } else {
+      console.error('   Continuing anyway (not in standalone mode)\n');
     }
   }
 }
 
-// Run if called directly
+// Always run seedBackend when script is executed directly
+// This ensures the database is populated on startup
 seedBackend().catch((error) => {
-  console.error('Fatal error:', error);
-  // Don't exit with error code when run from Vite plugin
-  // This allows the dev server to continue even if seeding fails
+  console.error('Fatal error in seed script:', error.message);
+  if (error.stack) {
+    console.error('Stack:', error.stack);
+  }
+  // Only exit with error code in standalone mode
+  // In background mode (from Docker), just log the error
   if (process.env.SEED_BACKEND_STANDALONE === 'true') {
+    console.error('Exiting because SEED_BACKEND_STANDALONE=true\n');
     process.exit(1);
+  } else {
+    console.error('Continuing in background mode (errors logged to /tmp/seed.log)\n');
   }
 });
 

@@ -78,7 +78,7 @@ export default function ScheduleForm({
           required
         >
           <option value="">Select an employee</option>
-          {employees.map((employee) => (
+          {employees.map((employee: any) => (
             <option key={employee.id} value={employee.id}>
               {employee.name}
             </option>

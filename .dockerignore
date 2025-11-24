@@ -1,0 +1,46 @@
+# Frontend Cypress test files (local development only)
+# Exclude test files and config, but keep fixtures (used by seed script)
+apps/frontend/cypress/e2e/
+apps/frontend/cypress/support/
+apps/frontend/cypress/screenshots/
+apps/frontend/cypress/videos/
+apps/frontend/cypress.config.ts
+# Keep: apps/frontend/cypress/fixtures/ (needed for seed script)
+
+# Frontend test files (local development only)
+apps/frontend/src/test/
+apps/frontend/vitest.config.ts
+
+# Node modules (installed in container)
+**/node_modules/
+
+# Build artifacts
+**/dist/
+**/build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+

@@ -1,4 +1,4 @@
-import { format, isWithinInterval, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Clock, Edit, Trash2, User } from 'lucide-react';
 
 interface ScheduleTimelineProps {
@@ -14,7 +14,7 @@ interface ScheduleTimelineProps {
 export default function ScheduleTimeline({
   schedules,
   employees,
-  selectedDate,
+  selectedDate: _selectedDate, // Prefixed with underscore to indicate intentionally unused (kept for interface compatibility)
   selectedEmployee,
   onEmployeeSelect,
   onEdit,
@@ -27,22 +27,6 @@ export default function ScheduleTimeline({
     return employee?.name || 'Unknown';
   };
 
-  const getScheduleForHour = (hour: number, employeeId?: string) => {
-    return schedules.filter((schedule) => {
-      const start = parseISO(schedule.startTime);
-      const end = parseISO(schedule.endTime);
-      const hourStart = new Date(selectedDate);
-      hourStart.setHours(hour, 0, 0, 0);
-      const hourEnd = new Date(selectedDate);
-      hourEnd.setHours(hour + 1, 0, 0, 0);
-
-      const overlaps = isWithinInterval(start, { start: hourStart, end: hourEnd }) ||
-        isWithinInterval(end, { start: hourStart, end: hourEnd }) ||
-        (start <= hourStart && end >= hourEnd);
-
-      return overlaps && (!employeeId || schedule.employeeId === employeeId);
-    });
-  };
 
   const employeeSchedules = selectedEmployee
     ? schedules.filter((s) => s.employeeId === selectedEmployee)

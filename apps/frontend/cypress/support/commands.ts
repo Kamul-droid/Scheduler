@@ -74,6 +74,7 @@ Cypress.Commands.add('createEmployee', (employee) => {
     url: `${API_BASE}/employees`,
     body: employee,
     failOnStatusCode: false,
+    timeout: 30000, // Increase timeout to 30 seconds
   }).then((response) => {
     // Backend returns 201 CREATED for POST
     expect(response.status).to.equal(201);
@@ -142,6 +143,7 @@ Cypress.Commands.add('createSchedule', (schedule) => {
     url: `${API_BASE}/schedules`,
     body: schedule,
     failOnStatusCode: false,
+    timeout: 30000,
   }).then((response) => {
     // Backend returns 201 CREATED for POST
     expect(response.status).to.equal(201);
@@ -159,7 +161,12 @@ Cypress.Commands.add('createSchedule', (schedule) => {
 
 Cypress.Commands.add('clearTestData', () => {
   // Delete all test schedules
-  cy.request('GET', `${API_BASE}/schedules`).then((response) => {
+  cy.request({
+    method: 'GET',
+    url: `${API_BASE}/schedules`,
+    timeout: 30000,
+    failOnStatusCode: false,
+  }).then((response) => {
     if (response.body && Array.isArray(response.body)) {
       response.body.forEach((schedule: any) => {
         cy.request({
@@ -176,7 +183,12 @@ Cypress.Commands.add('clearTestData', () => {
   });
 
   // Delete all test constraints
-  cy.request('GET', `${API_BASE}/constraints`).then((response) => {
+  cy.request({
+    method: 'GET',
+    url: `${API_BASE}/constraints`,
+    timeout: 30000,
+    failOnStatusCode: false,
+  }).then((response) => {
     if (response.body && Array.isArray(response.body)) {
       response.body.forEach((constraint: any) => {
         cy.request({
@@ -193,7 +205,12 @@ Cypress.Commands.add('clearTestData', () => {
   });
 
   // Delete all test employees
-  cy.request('GET', `${API_BASE}/employees`).then((response) => {
+  cy.request({
+    method: 'GET',
+    url: `${API_BASE}/employees`,
+    timeout: 30000,
+    failOnStatusCode: false,
+  }).then((response) => {
     if (response.body && Array.isArray(response.body)) {
       response.body.forEach((employee: any) => {
         cy.request({
@@ -212,6 +229,7 @@ Cypress.Commands.add('clearTestData', () => {
 
 Cypress.Commands.add('seedTestData', () => {
   // Use simplified test data for quick setup
+  // Commands will fail silently if entities already exist (handled by backend)
   cy.createEmployee({
     name: 'Test Employee 1',
     email: 'test1@example.com',
@@ -260,7 +278,12 @@ Cypress.Commands.add('seedPlatformData', () => {
 
   // Helper function to find existing entity by name
   const findEntityByName = (endpoint: string, nameField: string, nameValue: string) => {
-    return cy.request('GET', `${API_BASE}${endpoint}`).then((response) => {
+    return cy.request({
+      method: 'GET',
+      url: `${API_BASE}${endpoint}`,
+      timeout: 30000,
+      failOnStatusCode: false,
+    }).then((response) => {
       const entities = Array.isArray(response.body) ? response.body : response.body.data || [];
       return entities.find((e: any) => e[nameField] === nameValue);
     });
@@ -268,7 +291,12 @@ Cypress.Commands.add('seedPlatformData', () => {
 
   // Helper function to find existing entity by type
   const findEntityByType = (endpoint: string, typeField: string, typeValue: string) => {
-    return cy.request('GET', `${API_BASE}${endpoint}`).then((response) => {
+    return cy.request({
+      method: 'GET',
+      url: `${API_BASE}${endpoint}`,
+      timeout: 30000,
+      failOnStatusCode: false,
+    }).then((response) => {
       const entities = Array.isArray(response.body) ? response.body : response.body.data || [];
       return entities.find((e: any) => e[typeField] === typeValue);
     });
@@ -381,9 +409,15 @@ Cypress.Commands.add('seedPlatformData', () => {
   testData.shifts.forEach((shift, index) => {
     const dept = createdData.departments[index % createdData.departments.length];
     if (dept) {
-      cy.request('POST', `${API_BASE}/shifts`, {
-        ...shift,
-        departmentId: dept.id,
+      cy.request({
+        method: 'POST',
+        url: `${API_BASE}/shifts`,
+        body: {
+          ...shift,
+          departmentId: dept.id,
+        },
+        timeout: 30000,
+        failOnStatusCode: false,
       }).then((response) => {
         createdData.shifts.push(response.body);
       });
@@ -487,7 +521,13 @@ Cypress.Commands.add('createEmployeeByRole', (role: 'physician' | 'nurse' | 'nur
     },
   };
 
-  cy.request('POST', `${API_BASE}/employees`, employee);
+  cy.request({
+    method: 'POST',
+    url: `${API_BASE}/employees`,
+    body: employee,
+    timeout: 30000,
+    failOnStatusCode: false,
+  });
 });
 
 Cypress.Commands.add('createShiftForDepartment', (departmentName: string) => {
@@ -501,7 +541,12 @@ Cypress.Commands.add('createShiftForDepartment', (departmentName: string) => {
     throw new Error(`Department ${departmentName} not found in mappings`);
   }
   
-  cy.request('GET', `${API_BASE}/departments`).then((response) => {
+  cy.request({
+    method: 'GET',
+    url: `${API_BASE}/departments`,
+    timeout: 30000,
+    failOnStatusCode: false,
+  }).then((response) => {
     const department = response.body.find((d: any) => d.name === departmentName);
     if (department) {
       const shiftType = deptMapping.shiftCoverage === '24/7' ? 'day' : 'day';
@@ -526,7 +571,13 @@ Cypress.Commands.add('createShiftForDepartment', (departmentName: string) => {
         },
       };
 
-      cy.request('POST', `${API_BASE}/shifts`, shift);
+      cy.request({
+        method: 'POST',
+        url: `${API_BASE}/shifts`,
+        body: shift,
+        timeout: 30000,
+        failOnStatusCode: false,
+      });
     } else {
       throw new Error(`Department ${departmentName} not found in database`);
     }

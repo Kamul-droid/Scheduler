@@ -1,6 +1,5 @@
-import { ReactNode } from 'react';
 import { X } from 'lucide-react';
-import Button from './Button';
+import { ReactNode } from 'react';
 
 interface ModalProps {
   isOpen: boolean;

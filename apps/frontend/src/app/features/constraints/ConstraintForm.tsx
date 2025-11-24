@@ -71,7 +71,7 @@ export default function ConstraintForm({ constraint, onSubmit, onCancel }: Const
         </label>
         <select
           value={formData.type}
-          onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, type: e.target.value as typeof CONSTRAINT_TYPES[number] })}
           className="input"
           required
         >

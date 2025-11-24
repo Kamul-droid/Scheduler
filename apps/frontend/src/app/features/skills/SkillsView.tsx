@@ -11,7 +11,7 @@ export default function SkillsView() {
   const allSkills = useMemo(() => {
     const skillsMap = new Map<string, Skill & { employeeCount: number; employees: string[] }>();
 
-    employees.forEach((employee) => {
+    employees.forEach((employee: any) => {
       if (!employee.skills || !Array.isArray(employee.skills)) return;
 
       employee.skills.forEach((skill: Skill | string) => {

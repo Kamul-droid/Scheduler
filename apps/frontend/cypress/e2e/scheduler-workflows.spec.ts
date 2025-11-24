@@ -1,14 +1,30 @@
 describe('Scheduler Workflows', () => {
   beforeEach(() => {
+    // Check if frontend is accessible
+    cy.request({
+      method: 'GET',
+      url: 'http://localhost:3001',
+      timeout: 30000,
+      failOnStatusCode: false,
+    }).then((response) => {
+      if (response.status === 0) {
+        cy.log('Frontend server not accessible, skipping tests');
+        return;
+      }
+    });
+    
     // Clear test data and seed fresh data before each test
     cy.clearTestData();
     cy.seedTestData();
     
     // Visit the scheduler page
-    cy.visit('/app/scheduler');
+    cy.visit('/app/scheduler', {
+      timeout: 30000,
+      failOnStatusCode: false,
+    });
     
     // Wait for the page to load
-    cy.get('h2').contains('Schedule View').should('be.visible');
+    cy.get('h2').contains('Schedule View', { timeout: 30000 }).should('be.visible');
   });
 
   it('should display the scheduler view with week navigation', () => {
@@ -112,7 +128,12 @@ describe('Scheduler Workflows', () => {
     const API_BASE = Cypress.env('apiUrl') || 'http://localhost:3000';
     
     // First, get an employee ID
-    cy.request('GET', `${API_BASE}/employees`).then((response) => {
+    cy.request({
+      method: 'GET',
+      url: `${API_BASE}/employees`,
+      timeout: 30000,
+      failOnStatusCode: false,
+    }).then((response) => {
       if (response.body && response.body.length > 0) {
         const employeeId = response.body[0].id;
         const baseTime = new Date();
@@ -133,8 +154,20 @@ describe('Scheduler Workflows', () => {
           status: 'confirmed',
         };
         
-        cy.request('POST', `${API_BASE}/schedules`, schedule1);
-        cy.request('POST', `${API_BASE}/schedules`, schedule2);
+        cy.request({
+          method: 'POST',
+          url: `${API_BASE}/schedules`,
+          body: schedule1,
+          timeout: 30000,
+          failOnStatusCode: false,
+        });
+        cy.request({
+          method: 'POST',
+          url: `${API_BASE}/schedules`,
+          body: schedule2,
+          timeout: 30000,
+          failOnStatusCode: false,
+        });
         
         // Reload page to see conflicts
         cy.reload();

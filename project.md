@@ -1,6 +1,6 @@
 # Resource Scheduler - Complex Data Visualization & Optimization
 
-## Project Definition & Pitch
+## Project Definition
 
 ### What is Resource Scheduler?
 
